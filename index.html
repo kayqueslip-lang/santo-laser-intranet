@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Santo Laser | Master Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav>
+        <div class="logo-area">SANTO LASER</div>
+        <a class="nav-link active" data-target="dashboard-content"><i class="fa-solid fa-chart-pie"></i>DASHBOARD</a>
+        <a class="nav-link" data-target="calculator-content"><i class="fa-solid fa-calculator"></i>CALCULADORA OS</a>
+        <a class="nav-link" data-target="crm-content"><i class="fa-solid fa-users"></i>CRM CLIENTES</a>
+        <a class="nav-link" data-target="simulator-content"><i class="fa-solid fa-chart-line"></i>SIMULADOR</a>
+        <a class="nav-link" data-target="stock-content"><i class="fa-solid fa-boxes-stacked"></i>ESTOQUE</a>
+        
+        <a class="nav-link theme-switcher" id="theme-toggle-btn">
+            <i class="fa-solid fa-sun"></i>
+            <i class="fa-solid fa-moon"></i>
+            <span>ALTERAR TEMA</span>
+        </a>
+    </nav>
+
+    <main>
+        <!-- ======================= DASHBOARD ======================= -->
+        <div id="dashboard-content" class="content-section active">
+            <div class="welcome-msg">
+                <p id="current-date">Data</p>
+                <h2>BEM-VINDO AO COMANDO, SANTO LASER</h2>
+            </div>
+            <div class="kpi-grid">
+                <div class="kpi-card"><small>Faturamento Mensal</small><span class="value">R$ 12.450</span></div>
+                <div class="kpi-card"><small>Lucro Estimado</small><span class="value">R$ 4.200</span></div>
+                <div class="kpi-card"><small>Pedidos Ativos</small><span class="value">18</span></div>
+                <div class="kpi-card"><small>Margem Média</small><span class="value">38%</span></div>
+            </div>
+            <div class="goal-container">
+                <div class="goal-header"><span>PROGRESSO DA META MENSAL</span><span>65% CONCLUÍDO</span></div>
+                <div class="progress-bg"><div class="progress-fill"></div></div>
+            </div>
+            <div class="bottom-grid">
+                <div class="info-box"><h3>ÚLTIMAS ATIVIDADES</h3></div>
+                <div class="info-box"><h3>SAÚDE OPERACIONAL</h3></div>
+            </div>
+        </div>
+
+        <!-- ======================= CALCULATOR ======================= -->
+        <div id="calculator-content" class="content-section">
+            <div class="grid-master">
+                <div class="sidebar">
+                    <h2 style="font-family: var(--font-accent); font-size: 1.2rem; margin-top: 0;">Painel de Orçamento</h2>
+                    <div class="section-header">👤 Dados da Proposta</div>
+                    <div class="field-grid">
+                        <div class="field"><label>Nome do Cliente</label><input type="text" id="g_cliente" placeholder="Ex: João Silva" oninput="calc()"></div>
+                        <div class="field"><label>Data da Proposta</label><input type="date" id="g_data_proposta" oninput="calc()"></div>
+                    </div>
+                    <div class="section-header">📦 Itens do Pedido</div>
+                    <div id="items-list"></div>
+                    <button class="btn-add" onclick="addItem()">+ ADICIONAR NOVO ITEM</button>
+                    <div class="section-header">⚖️ Taxas e Impostos (%)</div>
+                    <div class="field-grid">
+                        <div class="field"><label>Imposto (NF/MEI)</label><div class="input-wrapper"><input type="number" id="g_imp" value="6" oninput="calc()" class="has-suffix"><span class="suffix">%</span></div></div>
+                        <div class="field"><label>Risco Operacional</label><div class="input-wrapper"><input type="number" id="g_risco" value="10" oninput="calc()" class="has-suffix"><span class="suffix">%</span></div></div>
+                    </div>
+                    <div class="section-header">🛠️ Custos Operacionais</div>
+                    <div class="field-grid">
+                        <div class="field"><label>Valor da Hora (R$)</label><div class="input-wrapper"><span class="prefix">R$</span><input type="number" id="g_hora" value="120" oninput="calc()" class="has-prefix"></div></div>
+                        <div class="field"><label>Taxa Cartão AM %</label><div class="input-wrapper"><input type="number" id="g_cartao" value="1" oninput="calc()" class="has-suffix"><span class="suffix">%</span></div></div>
+                    </div>
+                    <div class="field"><label>Custo Operacional / Insumos</label><div class="input-wrapper"><span class="prefix">R$</span><input type="number" id="g_frete" value="0" oninput="calc()" class="has-prefix"></div></div>
+                    <div class="section-header">🚚 Logística e Fidelidade</div>
+                    <div class="field-grid">
+                        <div class="field"><label>Frete p/ Cliente (R$)</label><div class="input-wrapper"><span class="prefix">R$</span><input type="number" id="g_frete_cliente" value="0" oninput="calc()" class="has-prefix"></div></div>
+                        <div class="field"><label>Desconto (%)</label><div class="input-wrapper"><input type="number" id="g_desconto" value="0" oninput="calc()" class="has-suffix"><span class="suffix">%</span></div></div>
+                    </div>
+                    <div class="section-header">💳 Pagamento e Parcelas</div>
+                    <div class="field-grid">
+                        <div class="field"><label>Entrada (R$)</label><div class="input-wrapper"><span class="prefix">R$</span><input type="number" id="g_ent" value="0" oninput="calc()" class="has-prefix"></div></div>
+                        <div class="field"><label>Nº Parcelas</label><input type="number" id="g_parc" value="3" oninput="calc()"></div>
+                    </div>
+                    <div class="section-header">📊 Resumo Interno (Consolidado)</div>
+                    <div class="internal-metrics">
+                        <div class="metric-line"><span>Tempo Total Produção:</span> <b id="out_tempo_total">0h 00m</b></div>
+                        <div class="metric-line"><span>Custo Total Geral:</span> <b id="out_custo_total">R$ 0,00</b></div>
+                        <div class="metric-line"><span>Lucro Real Estimado:</span> <b id="out_lucro_total" style="color:var(--success)">R$ 0,00</b></div>
+                    </div>
+                </div>
+                <div class="preview-side">
+                    <div class="card-venda" id="printable-card">
+                        <div class="brand-logo">SANTO LASER</div>
+                        <div class="client-info-display" id="display_cliente_box" style="display: none;">
+                            <div class="client-label">Cliente</div><div class="client-value" id="display_nome_cliente">-</div>
+                            <div class="client-label" style="margin-top: 10px;">Data da Proposta</div><div class="client-value" id="display_data_proposta">-</div>
+                        </div>
+                        <table class="items-table">
+                            <thead><tr><th class="qty-col">QTD</th><th>ITEM</th><th style="text-align:right">PREÇO</th></tr></thead>
+                            <tbody id="card-body"></tbody>
+                        </table>
+                        <div class="total-box"><small style="color:var(--neon); letter-spacing:2px; font-weight: bold;">VALOR TOTAL</small><div class="total-val" id="card_total">R$ 0,00</div></div>
+                        <div id="payment-details"></div>
+                        <div style="font-size:0.85rem; margin-top:20px;">Fale conosco: <a href="https://wa.me/5548996728584" class="wa-link">48 99672-8584</a></div>
+                        <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:10px; font-weight: bold; letter-spacing: 1px;">SANTO LASER - CNPJ: 64.544.332/0001-10</div>
+                    </div>
+                    <button class="btn-action" onclick="copyWA()">COPIAR PARA WHATSAPP</button>
+                    <button class="btn-pdf" onclick="window.print()">BAIXAR PROPOSTA EM PDF</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================= OTHER SECTIONS ======================= -->
+        <div id="crm-content" class="content-section"><h2>CRM Clientes</h2><p>Em construção...</p></div>
+        <div id="simulator-content" class="content-section"><h2>Simulador Financeiro</h2><p>Em construção...</p></div>
+        <div id="stock-content" class="content-section"><h2>Estoque</h2><p>Em construção...</p></div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
