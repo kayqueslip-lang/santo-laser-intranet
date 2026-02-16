@@ -215,3 +215,38 @@ main {
     #calculator-content .card-venda { box-shadow: none; border: 2px solid #000; margin: 0 auto; color: black !important; }
     #calculator-content .card-venda * { color: black !important; }
 }
+
+/* ======================= CRM STYLES ======================= */
+.crm-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+.crm-controls { display: flex; gap: 10px; }
+
+.kanban-container { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; min-height: 70vh; }
+.kanban-column { background: rgba(0,0,0,0.05); border-radius: 12px; min-width: 280px; flex: 1; display: flex; flex-direction: column; border: 1px solid var(--border-color); }
+[data-theme="dark"] .kanban-column { background: rgba(255,255,255,0.02); }
+
+.column-header { padding: 15px; font-family: var(--font-accent); font-size: 0.75rem; border-bottom: 2px solid var(--neon); display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); border-radius: 12px 12px 0 0; }
+.column-header .count { background: var(--neon); color: var(--bg-main); padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; }
+
+.kanban-cards { padding: 10px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+.kanban-card { background: var(--bg-panel); border: 1px solid var(--border-color); padding: 15px; border-radius: 10px; cursor: pointer; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.kanban-card:hover { border-color: var(--neon); transform: translateY(-2px); box-shadow: 0 5px 15px var(--shadow-color); }
+
+.card-title { font-weight: bold; font-size: 1rem; margin-bottom: 5px; color: var(--text-primary); }
+.card-company { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px; }
+.card-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.75rem; }
+.tag { padding: 2px 8px; border-radius: 4px; background: rgba(0, 230, 203, 0.1); color: var(--neon); font-weight: bold; }
+.tag.price { background: rgba(46, 125, 50, 0.1); color: var(--success); }
+.tag.date { background: rgba(245, 124, 0, 0.1); color: var(--warning); }
+
+.table-container { background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; }
+.crm-table { width: 100%; border-collapse: collapse; text-align: left; }
+.crm-table th { padding: 15px; background: rgba(0,0,0,0.05); font-family: var(--font-accent); font-size: 0.75rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
+.crm-table td { padding: 15px; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+.crm-table tr:hover { background: rgba(0, 230, 203, 0.02); }
+
+/* Modal Styles */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 100; }
+.modal-content { background: var(--bg-panel); padding: 30px; border-radius: 20px; border: 1px solid var(--neon); width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+.modal-header h3 { font-family: var(--font-accent); margin: 0; color: var(--neon); }
+.close-modal { cursor: pointer; font-size: 1.5rem; color: var(--text-secondary); }

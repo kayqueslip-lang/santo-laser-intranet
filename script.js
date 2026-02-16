@@ -152,6 +152,15 @@ function calc() {
     document.getElementById('out_custo_total').innerText = `R$ ${totalCustoGeral.toFixed(2)}`;
     document.getElementById('out_lucro_total').innerText = `R$ ${lucroReal.toFixed(2)}`;
 
+    // Store calculated values for CRM integration
+    window.currentCalculation = {
+        total: totalFinal,
+        custo: totalCustoGeral,
+        lucro: lucroReal,
+        impostos: totalFinal * impGlobal,
+        tempo: totalTempoGeral
+    };
+
     // Render Card
     const cardBody = document.getElementById('card-body');
     cardBody.innerHTML = items.map(i => `
@@ -190,4 +199,232 @@ function copyWA() {
     navigator.clipboard.writeText(msg).then(() => {
         alert("Copiado para o WhatsApp!");
     });
+}
+
+// ================================================================================= //
+//                                     CRM LOGIC                                     //
+// ================================================================================= //
+
+let leads = [];
+const NOTION_DATA_SOURCE_ID = "ee5e781b-63ba-479a-9497-1ebf4f62e637";
+
+function toggleCRMView() {
+    const kanban = document.getElementById('kanban-view');
+    const table = document.getElementById('table-view');
+    if (kanban.style.display === 'none') {
+        kanban.style.display = 'flex';
+        table.style.display = 'none';
+    } else {
+        kanban.style.display = 'none';
+        table.style.display = 'block';
+    }
+}
+
+function openNewLeadModal() {
+    document.getElementById('modal-title').innerText = "NOVO CLIENTE / LEAD";
+    document.getElementById('m_cliente').value = "";
+    document.getElementById('m_empresa').value = "";
+    document.getElementById('m_valor').value = "";
+    document.getElementById('m_entrega').value = "";
+    document.getElementById('lead-modal').style.display = 'flex';
+}
+
+function closeLeadModal() {
+    document.getElementById('lead-modal').style.display = 'none';
+}
+
+function renderCRM() {
+    // Clear columns
+    document.querySelectorAll('.kanban-cards').forEach(col => col.innerHTML = "");
+    const tableBody = document.getElementById('crm-table-body');
+    if (tableBody) tableBody.innerHTML = "";
+
+    const counts = { "Proposta Enviada": 0, "Aprovado": 0, "Produção": 0, "Finalizado": 0, "Pago": 0 };
+
+    leads.forEach(lead => {
+        counts[lead.status]++;
+        
+        // Kanban Card
+        const card = document.createElement('div');
+        card.className = 'kanban-card';
+        card.onclick = () => editLead(lead.id);
+        card.innerHTML = `
+            <div class="card-title">${lead.cliente}</div>
+            ${lead.empresa ? `<div class="card-company">${lead.empresa}</div>` : ''}
+            <div class="card-meta">
+                ${lead.valor ? `<span class="tag price">R$ ${parseFloat(lead.valor).toFixed(2)}</span>` : ''}
+                ${lead.entrega ? `<span class="tag date"><i class="fa-solid fa-calendar-days"></i> ${new Date(lead.entrega + 'T00:00:00').toLocaleDateString('pt-BR')}</span>` : ''}
+                <span class="tag">${lead.tipo}</span>
+            </div>
+        `;
+        
+        const column = document.querySelector(`.kanban-column[data-status="${lead.status}"] .kanban-cards`);
+        if (column) column.appendChild(card);
+
+        // Table Row
+        if (tableBody) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><b>${lead.cliente}</b></td>
+                <td>${lead.empresa || '-'}</td>
+                <td><span class="tag">${lead.status}</span></td>
+                <td>R$ ${parseFloat(lead.valor || 0).toFixed(2)}</td>
+                <td>${lead.entrega ? new Date(lead.entrega + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+                <td>${lead.tipo}</td>
+                <td><button onclick="editLead('${lead.id}')" style="background:none; border:none; color:var(--neon); cursor:pointer;"><i class="fa-solid fa-pen-to-square"></i></button></td>
+            `;
+            tableBody.appendChild(row);
+        }
+    });
+
+    // Update counts
+    Object.keys(counts).forEach(status => {
+        const countEl = document.querySelector(`.kanban-column[data-status="${status}"] .count`);
+        if (countEl) countEl.innerText = counts[status];
+    });
+}
+
+async function saveLead() {
+    const leadData = {
+        id: Date.now().toString(),
+        cliente: document.getElementById('m_cliente').value,
+        empresa: document.getElementById('m_empresa').value,
+        status: document.getElementById('m_status').value,
+        origem: document.getElementById('m_origem').value,
+        tipo: document.getElementById('m_tipo').value,
+        entrega: document.getElementById('m_entrega').value,
+        valor: document.getElementById('m_valor').value,
+        lucro: document.getElementById('m_lucro').value
+    };
+
+    if (!leadData.cliente) {
+        alert("O nome do cliente é obrigatório!");
+        return;
+    }
+
+    leads.push(leadData);
+    renderCRM();
+    renderFinance();
+    closeLeadModal();
+
+    // Send to Notion (Background)
+    try {
+        console.log("Sincronizando com Notion...");
+        // Aqui chamaremos a função de integração que o Manus irá configurar
+    } catch (e) {
+        console.error("Erro ao sincronizar com Notion", e);
+    }
+}
+
+function sendToCRM() {
+    const cliente = document.getElementById('g_cliente').value;
+    if (!cliente) {
+        alert("Por favor, preencha o nome do cliente na calculadora antes de salvar.");
+        return;
+    }
+
+    const calc = window.currentCalculation || {};
+    
+    // Fill modal with calculator data
+    document.getElementById('m_cliente').value = cliente;
+    document.getElementById('m_valor').value = calc.total ? calc.total.toFixed(2) : "";
+    document.getElementById('m_lucro').value = calc.lucro ? calc.lucro.toFixed(2) : "";
+    document.getElementById('m_entrega').value = document.getElementById('g_data_proposta').value;
+    
+    // Open modal for final adjustments
+    document.getElementById('modal-title').innerText = "VINCULAR ORÇAMENTO AO CRM";
+    document.getElementById('lead-modal').style.display = 'flex';
+}
+
+// ================================================================================= //
+//                                   FINANCE LOGIC                                   //
+// ================================================================================= //
+
+let transactions = [];
+
+function openTransactionModal(tipo) {
+    document.getElementById('f_tipo').value = tipo;
+    document.getElementById('finance-modal-title').innerText = tipo === 'entrada' ? 'ADICIONAR ENTRADA' : 'ADICIONAR SAÍDA';
+    document.getElementById('f_desc').value = "";
+    document.getElementById('f_valor').value = "";
+    document.getElementById('f_data').valueAsDate = new Date();
+    document.getElementById('finance-modal').style.display = 'flex';
+}
+
+function closeFinanceModal() {
+    document.getElementById('finance-modal').style.display = 'none';
+}
+
+function saveTransaction() {
+    const trans = {
+        id: Date.now().toString(),
+        data: document.getElementById('f_data').value,
+        desc: document.getElementById('f_desc').value,
+        tipo: document.getElementById('f_tipo').value,
+        metodo: document.getElementById('f_metodo').value,
+        valor: parseFloat(document.getElementById('f_valor').value) || 0
+    };
+
+    if (!trans.desc || !trans.valor) {
+        alert("Preencha a descrição e o valor!");
+        return;
+    }
+
+    transactions.push(trans);
+    renderFinance();
+    closeFinanceModal();
+}
+
+function renderFinance() {
+    const tableBody = document.getElementById('finance-table-body');
+    if (!tableBody) return;
+    tableBody.innerHTML = "";
+
+    let inflow = 0;
+    let outflow = 0;
+
+    // Add transactions from CRM (Paid status)
+    leads.filter(l => l.status === 'Pago').forEach(l => {
+        inflow += parseFloat(l.valor || 0);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${l.entrega ? new Date(l.entrega + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+            <td><b>VENDA: ${l.cliente}</b></td>
+            <td><span class="tag">Venda</span></td>
+            <td>CRM</td>
+            <td style="color:var(--success)">+ R$ ${parseFloat(l.valor || 0).toFixed(2)}</td>
+            <td>-</td>
+        `;
+        tableBody.appendChild(row);
+    });
+
+    // Add manual transactions
+    transactions.forEach(t => {
+        if (t.tipo === 'entrada') inflow += t.valor;
+        else outflow += t.valor;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${new Date(t.data + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+            <td><b>${t.desc}</b></td>
+            <td><span class="tag">${t.tipo === 'entrada' ? 'Entrada' : 'Saída'}</span></td>
+            <td>${t.metodo}</td>
+            <td style="color:${t.tipo === 'entrada' ? 'var(--success)' : 'var(--danger)'}">
+                ${t.tipo === 'entrada' ? '+' : '-'} R$ ${t.valor.toFixed(2)}
+            </td>
+            <td><button onclick="removeTransaction('${t.id}')" style="background:none; border:none; color:var(--danger); cursor:pointer;"><i class="fa-solid fa-trash"></i></button></td>
+        `;
+        tableBody.appendChild(row);
+    });
+
+    const balance = inflow - outflow;
+    document.getElementById('cash-inflow').innerText = `R$ ${inflow.toFixed(2)}`;
+    document.getElementById('cash-outflow').innerText = `R$ ${outflow.toFixed(2)}`;
+    document.getElementById('cash-balance').innerText = `R$ ${balance.toFixed(2)}`;
+    document.getElementById('cash-result').innerText = `R$ ${balance.toFixed(2)}`;
+}
+
+function removeTransaction(id) {
+    transactions = transactions.filter(t => t.id !== id);
+    renderFinance();
 }

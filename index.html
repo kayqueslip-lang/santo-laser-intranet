@@ -105,17 +105,193 @@
                         <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:10px; font-weight: bold; letter-spacing: 1px;">SANTO LASER - CNPJ: 64.544.332/0001-10</div>
                     </div>
                     <button class="btn-action" onclick="copyWA()">COPIAR PARA WHATSAPP</button>
+                    <button class="btn-action" style="background: var(--success); margin-top: 10px;" onclick="sendToCRM()">SALVAR NO CRM & NOTION</button>
                     <button class="btn-pdf" onclick="window.print()">BAIXAR PROPOSTA EM PDF</button>
                 </div>
             </div>
         </div>
 
-        <!-- ======================= OTHER SECTIONS ======================= -->
-        <div id="crm-content" class="content-section"><h2>CRM Clientes</h2><p>Em construção...</p></div>
-        <div id="simulator-content" class="content-section"><h2>Simulador Financeiro</h2><p>Em construção...</p></div>
+        <!-- ======================= CRM ======================= -->
+        <div id="crm-content" class="content-section">
+            <div class="crm-header">
+                <h2>CRM - GESTÃO DE OPORTUNIDADES</h2>
+                <div class="crm-controls">
+                    <button class="btn-action" onclick="openNewLeadModal()">+ NOVO CLIENTE</button>
+                    <button class="btn-pdf" onclick="toggleCRMView()">ALTERNAR VISÃO (KANBAN/TABELA)</button>
+                </div>
+            </div>
+
+            <div id="kanban-view" class="kanban-container">
+                <div class="kanban-column" data-status="Proposta Enviada">
+                    <div class="column-header">PROPOSTA ENVIADA <span class="count">0</span></div>
+                    <div class="kanban-cards"></div>
+                </div>
+                <div class="kanban-column" data-status="Aprovado">
+                    <div class="column-header">APROVADO <span class="count">0</span></div>
+                    <div class="kanban-cards"></div>
+                </div>
+                <div class="kanban-column" data-status="Produção">
+                    <div class="column-header">PRODUÇÃO <span class="count">0</span></div>
+                    <div class="kanban-cards"></div>
+                </div>
+                <div class="kanban-column" data-status="Finalizado">
+                    <div class="column-header">FINALIZADO <span class="count">0</span></div>
+                    <div class="kanban-cards"></div>
+                </div>
+                <div class="kanban-column" data-status="Pago">
+                    <div class="column-header">PAGO <span class="count">0</span></div>
+                    <div class="kanban-cards"></div>
+                </div>
+            </div>
+
+            <div id="table-view" class="table-container" style="display: none;">
+                <table class="crm-table">
+                    <thead>
+                        <tr>
+                            <th>CLIENTE</th>
+                            <th>EMPRESA</th>
+                            <th>STATUS</th>
+                            <th>VALOR</th>
+                            <th>ENTREGA</th>
+                            <th>TIPO</th>
+                            <th>AÇÕES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="crm-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ======================= SIMULADOR FINANCEIRO (FLUXO DE CAIXA) ======================= -->
+        <div id="simulator-content" class="content-section">
+            <div class="crm-header">
+                <h2>SIMULADOR FINANCEIRO & FLUXO DE CAIXA</h2>
+                <div class="crm-controls">
+                    <button class="btn-action" style="background: var(--success);" onclick="openTransactionModal('entrada')">+ ENTRADA</button>
+                    <button class="btn-action" style="background: var(--danger);" onclick="openTransactionModal('saida')">+ SAÍDA</button>
+                </div>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card"><small>Saldo Atual</small><span class="value" id="cash-balance">R$ 0,00</span></div>
+                <div class="kpi-card"><small>Entradas (Mês)</small><span class="value" style="color:var(--success)" id="cash-inflow">R$ 0,00</span></div>
+                <div class="kpi-card"><small>Saídas (Mês)</small><span class="value" style="color:var(--danger)" id="cash-outflow">R$ 0,00</span></div>
+                <div class="kpi-card"><small>Resultado do Período</small><span class="value" id="cash-result">R$ 0,00</span></div>
+            </div>
+
+            <div class="table-container">
+                <table class="crm-table">
+                    <thead>
+                        <tr>
+                            <th>DATA</th>
+                            <th>DESCRIÇÃO</th>
+                            <th>CATEGORIA</th>
+                            <th>MÉTODO</th>
+                            <th>VALOR</th>
+                            <th>AÇÕES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="finance-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ======================= MODAL FINANCEIRO ======================= -->
+        <div id="finance-modal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="finance-modal-title">ADICIONAR TRANSAÇÃO</h3>
+                    <span class="close-modal" onclick="closeFinanceModal()">&times;</span>
+                </div>
+                <div class="sidebar" style="width: 100%; box-shadow: none; background: transparent; padding: 0;">
+                    <div class="field-grid">
+                        <div class="field"><label>Descrição</label><input type="text" id="f_desc" placeholder="Ex: Compra de Acrílico"></div>
+                        <div class="field"><label>Valor (R$)</label><input type="number" id="f_valor" placeholder="0.00"></div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label>Método</label>
+                            <select id="f_metodo" style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; font-family: var(--font-primary);">
+                                <option value="PIX">PIX</option>
+                                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                                <option value="Cartão de Débito">Cartão de Débito</option>
+                                <option value="Espécie">Espécie</option>
+                                <option value="Cripto">Cripto</option>
+                            </select>
+                        </div>
+                        <div class="field"><label>Data</label><input type="date" id="f_data"></div>
+                    </div>
+                    <input type="hidden" id="f_tipo">
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button class="btn-action" onclick="saveTransaction()">SALVAR TRANSAÇÃO</button>
+                        <button class="btn-pdf" onclick="closeFinanceModal()" style="background: var(--danger); color: white;">CANCELAR</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="stock-content" class="content-section"><h2>Estoque</h2><p>Em construção...</p></div>
     </main>
 
     <script src="script.js"></script>
 </body>
 </html>
+
+    <!-- ======================= MODAL LEAD ======================= -->
+    <div id="lead-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">NOVO CLIENTE / LEAD</h3>
+                <span class="close-modal" onclick="closeLeadModal()">&times;</span>
+            </div>
+            <div class="sidebar" style="width: 100%; box-shadow: none; background: transparent; padding: 0;">
+                <div class="section-header">👤 Informações Básicas</div>
+                <div class="field-grid">
+                    <div class="field"><label>Nome do Cliente *</label><input type="text" id="m_cliente" placeholder="Nome Completo"></div>
+                    <div class="field"><label>Empresa</label><input type="text" id="m_empresa" placeholder="Razão Social / Fantasia"></div>
+                </div>
+                <div class="field-grid">
+                    <div class="field">
+                        <label>Status</label>
+                        <select id="m_status" style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; font-family: var(--font-primary);">
+                            <option value="Proposta Enviada">Proposta Enviada</option>
+                            <option value="Aprovado">Aprovado</option>
+                            <option value="Produção">Produção</option>
+                            <option value="Finalizado">Finalizado</option>
+                            <option value="Pago">Pago</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Origem</label>
+                        <select id="m_origem" style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; font-family: var(--font-primary);">
+                            <option value="WhatsApp">WhatsApp</option>
+                            <option value="Instagram">Instagram</option>
+                            <option value="Indicação">Indicação</option>
+                            <option value="Site">Site</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="section-header">📦 Detalhes do Trabalho</div>
+                <div class="field-grid">
+                    <div class="field">
+                        <label>Tipo</label>
+                        <select id="m_tipo" style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; font-family: var(--font-primary);">
+                            <option value="Produto">Produto</option>
+                            <option value="Serviço">Serviço</option>
+                        </select>
+                    </div>
+                    <div class="field"><label>Data de Entrega</label><input type="date" id="m_entrega"></div>
+                </div>
+                <div class="section-header">💰 Valores (Opcional)</div>
+                <div class="field-grid">
+                    <div class="field"><label>Valor Total (R$)</label><input type="number" id="m_valor" placeholder="0.00"></div>
+                    <div class="field"><label>Lucro Real (R$)</label><input type="number" id="m_lucro" placeholder="0.00"></div>
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button class="btn-action" onclick="saveLead()">SALVAR NO CRM & NOTION</button>
+                    <button class="btn-pdf" onclick="closeLeadModal()" style="background: var(--danger); color: white;">CANCELAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
