@@ -39,7 +39,7 @@
         <!-- ======================= DASHBOARD ======================= -->
         <div id="dashboard-content" class="content-section active">
             <header>
-                <h2>SAÚDE DA EMPRESA</h2>
+                <h2>PAINEL DE CONTROLE</h2>
                 <div class="date-display" id="current-date">--/--/----</div>
             </header>
             <div class="kpi-grid">
@@ -52,23 +52,37 @@
                     <span class="value" id="dash-lucro">R$ 0,00</span>
                 </div>
                 <div class="kpi-card">
-                    <small id="label-pedidos-ativos">Pedidos Ativos</small>
+                    <small>Pedidos Ativos</small>
                     <span class="value" id="dash-pedidos">0</span>
                 </div>
                 <div class="kpi-card">
-                    <small>Conversão de Leads</small>
+                    <small>Conversão</small>
                     <span class="value" id="dash-conversao">0%</span>
                 </div>
             </div>
             <div class="charts-row">
                 <div class="chart-container">
-                    <h3>Vendas por Origem</h3>
+                    <h3>Tendência de Faturamento</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-faturamento"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3>Leads por Origem</h3>
                     <div class="chart-wrapper">
                         <canvas id="chart-origem"></canvas>
                     </div>
                 </div>
+            </div>
+            <div class="charts-row">
                 <div class="chart-container">
-                    <h3>Status dos Leads</h3>
+                    <h3>Lucro por Categoria</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chart-lucro-cat"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3>Status dos Projetos</h3>
                     <div class="chart-wrapper">
                         <canvas id="chart-status"></canvas>
                     </div>
@@ -77,9 +91,7 @@
             <div class="dashboard-timeline">
                 <div class="chart-container">
                     <h3>Linha do Tempo de Projetos</h3>
-                    <div id="timeline-wrapper" class="timeline-container">
-                        <!-- Preenchido via JS -->
-                    </div>
+                    <div id="timeline-wrapper" class="timeline-container"></div>
                 </div>
             </div>
         </div>
@@ -95,30 +107,30 @@
             </div>
 
             <div id="kanban-view" class="kanban-container">
-                <div class="kanban-column" id="col-1" ondrop="drop(event, 0)" ondragover="allowDrop(event)">
-                    <div class="column-header"><span id="label-step-1">PASSO 1</span> <span class="count" id="count-0">0</span></div>
+                <div class="kanban-column" ondrop="drop(event, 0)" ondragover="allowDrop(event)">
+                    <div class="column-header"><span id="label-step-1">PROPOSTA</span> <span class="count" id="count-0">0</span></div>
                     <div class="kanban-cards" id="cards-0"></div>
                 </div>
-                <div class="kanban-column" id="col-2" ondrop="drop(event, 1)" ondragover="allowDrop(event)">
-                    <div class="column-header"><span id="label-step-2">PASSO 2</span> <span class="count" id="count-1">0</span></div>
+                <div class="kanban-column" ondrop="drop(event, 1)" ondragover="allowDrop(event)">
+                    <div class="column-header"><span id="label-step-2">APROVADO</span> <span class="count" id="count-1">0</span></div>
                     <div class="kanban-cards" id="cards-1"></div>
                 </div>
-                <div class="kanban-column" id="col-3" ondrop="drop(event, 2)" ondragover="allowDrop(event)">
-                    <div class="column-header"><span id="label-step-3">PASSO 3</span> <span class="count" id="count-2">0</span></div>
+                <div class="kanban-column" ondrop="drop(event, 2)" ondragover="allowDrop(event)">
+                    <div class="column-header"><span id="label-step-3">PRODUÇÃO</span> <span class="count" id="count-2">0</span></div>
                     <div class="kanban-cards" id="cards-2"></div>
                 </div>
-                <div class="kanban-column" id="col-4" ondrop="drop(event, 3)" ondragover="allowDrop(event)">
-                    <div class="column-header"><span id="label-step-4">PASSO 4</span> <span class="count" id="count-3">0</span></div>
+                <div class="kanban-column" ondrop="drop(event, 3)" ondragover="allowDrop(event)">
+                    <div class="column-header"><span id="label-step-4">FINALIZADO</span> <span class="count" id="count-3">0</span></div>
                     <div class="kanban-cards" id="cards-3"></div>
                 </div>
-                <div class="kanban-column" id="col-5" ondrop="drop(event, 4)" ondragover="allowDrop(event)">
-                    <div class="column-header"><span id="label-step-5">PASSO 5</span> <span class="count" id="count-4">0</span></div>
+                <div class="kanban-column" ondrop="drop(event, 4)" ondragover="allowDrop(event)">
+                    <div class="column-header"><span id="label-step-5">PAGO</span> <span class="count" id="count-4">0</span></div>
                     <div class="kanban-cards" id="cards-4"></div>
                 </div>
             </div>
 
             <div id="table-view" class="table-container" style="display: none;">
-                <table class="crm-table">
+                <table class="modern-table">
                     <thead>
                         <tr>
                             <th>CLIENTE</th>
@@ -138,57 +150,33 @@
         <div id="calculator-content" class="content-section">
             <div class="calc-main-layout">
                 <div class="calc-form-side">
-                    <div class="section-header">⚙️ Configurações Globais</div>
+                    <div class="section-header">⚙️ Configurações</div>
                     <div class="field-row">
-                        <div class="field-group">
-                            <label id="label-valor-hora">Valor da Hora (R$)</label>
-                            <input type="number" id="g_valor_hora" value="100" oninput="calc()">
-                        </div>
-                        <div class="field-group">
-                            <label id="label-imposto">Imposto (%)</label>
-                            <input type="number" id="g_imposto" value="6" oninput="calc()">
-                        </div>
+                        <div class="field-group"><label>Valor Hora (R$)</label><input type="number" id="g_valor_hora" value="100" oninput="calc()"></div>
+                        <div class="field-group"><label>Imposto (%)</label><input type="number" id="g_imposto" value="6" oninput="calc()"></div>
                     </div>
                     <div class="field-row">
-                        <div class="field-group">
-                            <label>Taxa Cartão (%)</label>
-                            <input type="number" id="g_cartao" value="5" oninput="calc()">
-                        </div>
-                        <div class="field-group">
-                            <label>Frete Insumos (R$)</label>
-                            <input type="number" id="g_frete" value="0" oninput="calc()">
-                        </div>
+                        <div class="field-group"><label>Taxa Cartão (%)</label><input type="number" id="g_cartao" value="5" oninput="calc()"></div>
+                        <div class="field-group"><label>Frete Insumos (R$)</label><input type="number" id="g_frete" value="0" oninput="calc()"></div>
                     </div>
                     
-                    <div class="section-header">👤 Dados do Cliente</div>
-                    <div class="field-group">
-                        <label>Nome do Cliente</label>
-                        <input type="text" id="g_cliente" placeholder="Nome Completo" oninput="calc()">
-                    </div>
-                    <div class="field-group">
-                        <label>Data da Proposta</label>
-                        <input type="date" id="g_data_proposta" oninput="calc()">
-                    </div>
+                    <div class="section-header">👤 Cliente</div>
+                    <div class="field-group"><label>Nome</label><input type="text" id="g_cliente" placeholder="Nome do Cliente" oninput="calc()"></div>
+                    <div class="field-group"><label>Data</label><input type="date" id="g_data_proposta" oninput="calc()"></div>
 
-                    <div class="section-header">💎 Itens do Orçamento</div>
+                    <div class="section-header">💎 Itens</div>
                     <div id="items-list"></div>
                     <button class="btn-modern btn-primary" style="width:100%; margin-top:10px;" onclick="addItem()">+ ADICIONAR ITEM</button>
                     
-                    <div class="section-header">🚚 Frete e Desconto</div>
+                    <div class="section-header">🚚 Adicionais</div>
                     <div class="field-row">
-                        <div class="field-group">
-                            <label>Frete Cliente (R$)</label>
-                            <input type="number" id="g_frete_cliente" value="0" oninput="calc()">
-                        </div>
-                        <div class="field-group">
-                            <label>Desconto (%)</label>
-                            <input type="number" id="g_desconto" value="0" oninput="calc()">
-                        </div>
+                        <div class="field-group"><label>Frete (R$)</label><input type="number" id="g_frete_cliente" value="0" oninput="calc()"></div>
+                        <div class="field-group"><label>Desconto (%)</label><input type="number" id="g_desconto" value="0" oninput="calc()"></div>
                     </div>
                 </div>
 
                 <div class="calc-preview-side">
-                    <div class="quote-card" id="quote-to-print">
+                    <div class="quote-card">
                         <div class="quote-header">
                             <img id="quote-logo-img" src="" alt="Logo" style="height:60px">
                             <div style="text-align:right">
@@ -196,9 +184,7 @@
                                 <small id="display_data_proposta"></small>
                             </div>
                         </div>
-                        <div class="client-info">
-                            <strong>CLIENTE:</strong> <span id="display_nome_cliente"></span>
-                        </div>
+                        <div class="client-info"><strong>CLIENTE:</strong> <span id="display_nome_cliente"></span></div>
                         <table class="items-table">
                             <thead><tr><th>QTD</th><th>DESCRIÇÃO</th><th>TOTAL</th></tr></thead>
                             <tbody id="card-body"></tbody>
@@ -206,9 +192,7 @@
                         <div class="totals-area">
                             <div class="total-row main"><span>TOTAL FINAL</span><span id="card_total">R$ 0,00</span></div>
                         </div>
-                        <div class="footer-info">
-                            SANTO LASER - CNPJ: 64.544.332/0001-10 | (48) 99672-8584
-                        </div>
+                        <div class="footer-info">SANTO LASER - CNPJ: 64.544.332/0001-10 | (48) 99672-8584</div>
                     </div>
                     <div class="calc-actions">
                         <button class="btn-modern btn-primary" onclick="copyWA()"><i class="fa-brands fa-whatsapp"></i> WHATSAPP</button>
@@ -231,58 +215,22 @@
             </div>
             
             <div class="finance-kpis">
-                <div class="kpi-card">
-                    <small>Saldo Atual</small>
-                    <span class="value" id="fin-saldo">R$ 0,00</span>
-                </div>
-                <div class="kpi-card">
-                    <small>Total Entradas</small>
-                    <span class="value" id="fin-entradas" style="color:var(--success)">R$ 0,00</span>
-                </div>
-                <div class="kpi-card">
-                    <small>Total Saídas</small>
-                    <span class="value" id="fin-saidas" style="color:var(--danger)">R$ 0,00</span>
-                </div>
+                <div class="kpi-card"><small>Saldo Atual</small><span class="value" id="fin-saldo">R$ 0,00</span></div>
+                <div class="kpi-card"><small>Entradas</small><span class="value" id="fin-entradas" style="color:var(--success)">R$ 0,00</span></div>
+                <div class="kpi-card"><small>Saídas</small><span class="value" id="fin-saidas" style="color:var(--danger)">R$ 0,00</span></div>
             </div>
 
             <div class="filter-bar">
-                <div class="filter-group">
-                    <label>Período</label>
-                    <div class="date-inputs">
-                        <input type="date" id="filter-start" onchange="renderFinance()">
-                        <span>até</span>
-                        <input type="date" id="filter-end" onchange="renderFinance()">
-                    </div>
-                </div>
-                <div class="filter-group">
-                    <label>Tipo</label>
-                    <select id="filter-type" onchange="renderFinance()">
-                        <option value="">Todos</option>
-                        <option value="Entrada">Entrada</option>
-                        <option value="Saída">Saída</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Categoria</label>
-                    <select id="filter-cat" onchange="renderFinance()">
-                        <option value="">Todas</option>
-                    </select>
-                </div>
+                <div class="filter-group"><label>Início</label><input type="date" id="filter-start" onchange="renderFinance()"></div>
+                <div class="filter-group"><label>Fim</label><input type="date" id="filter-end" onchange="renderFinance()"></div>
+                <div class="filter-group"><label>Tipo</label><select id="filter-type" onchange="renderFinance()"><option value="">Todos</option><option value="Entrada">Entrada</option><option value="Saída">Saída</option></select></div>
+                <div class="filter-group"><label>Categoria</label><select id="filter-cat" onchange="renderFinance()"><option value="">Todas</option></select></div>
                 <button class="btn-modern" onclick="clearFinanceFilters()">LIMPAR</button>
             </div>
 
             <div class="table-container">
-                <table class="crm-table">
-                    <thead>
-                        <tr>
-                            <th>DATA</th>
-                            <th>DESCRIÇÃO</th>
-                            <th>TIPO</th>
-                            <th>CATEGORIA</th>
-                            <th>VALOR</th>
-                            <th>AÇÕES</th>
-                        </tr>
-                    </thead>
+                <table class="modern-table">
+                    <thead><tr><th>DATA</th><th>DESCRIÇÃO</th><th>TIPO</th><th>CATEGORIA</th><th>VALOR</th><th>AÇÕES</th></tr></thead>
                     <tbody id="finance-table-body"></tbody>
                 </table>
             </div>
@@ -290,47 +238,20 @@
 
         <!-- ======================= SIMULADOR METAS ======================= -->
         <div id="simulator-content" class="content-section">
-            <header>
-                <h2>SIMULADOR DE METAS FINANCEIRAS</h2>
-            </header>
             <div class="simulator-layout">
                 <div class="sim-sidebar">
-                    <div class="section-header">🎯 Metas Desejadas</div>
-                    <div class="field-group">
-                        <label id="label-prolabore">Pró-labore (R$)</label>
-                        <input type="number" id="sim-prolabore" value="2500" oninput="runSimulator()">
-                    </div>
-                    <div class="field-group">
-                        <label id="label-custos-fixos">Custos Fixos (R$)</label>
-                        <input type="number" id="sim-fixos" value="1000" oninput="runSimulator()">
-                    </div>
-                    <div class="field-group">
-                        <label id="label-marketing">Marketing (R$)</label>
-                        <input type="number" id="sim-marketing" value="200" oninput="runSimulator()">
-                    </div>
-                    <div class="field-group">
-                        <label id="label-reserva">Reserva/Investimento (R$)</label>
-                        <input type="number" id="sim-reserva" value="500" oninput="runSimulator()">
-                    </div>
-                    <div class="sim-total-meta">
-                        <small>META DE LUCRO TOTAL</small>
-                        <h2 id="sim-meta-total">R$ 4.200,00</h2>
-                    </div>
+                    <div class="section-header">🎯 Metas</div>
+                    <div class="field-group"><label id="label-prolabore">Pró-labore</label><input type="number" id="sim-prolabore" value="2500" oninput="runSimulator()"></div>
+                    <div class="field-group"><label id="label-custos-fixos">Fixos</label><input type="number" id="sim-fixos" value="1000" oninput="runSimulator()"></div>
+                    <div class="field-group"><label id="label-marketing">Marketing</label><input type="number" id="sim-marketing" value="200" oninput="runSimulator()"></div>
+                    <div class="field-group"><label id="label-reserva">Reserva</label><input type="number" id="sim-reserva" value="500" oninput="runSimulator()"></div>
+                    <div class="sim-total-meta"><small>META TOTAL</small><h2 id="sim-meta-total">R$ 0,00</h2></div>
                 </div>
                 <div class="sim-main">
-                    <div class="section-header">📊 Planejamento de Produtos/Serviços</div>
+                    <div class="section-header">📊 Produtos</div>
                     <div class="table-container">
-                        <table class="crm-table">
-                            <thead>
-                                <tr>
-                                    <th>NOME</th>
-                                    <th>PREÇO VENDA</th>
-                                    <th>MARGEM (%)</th>
-                                    <th>VENDAS ATUAIS</th>
-                                    <th>VENDAS NECESSÁRIAS</th>
-                                    <th>AÇÕES</th>
-                                </tr>
-                            </thead>
+                        <table class="modern-table">
+                            <thead><tr><th>NOME</th><th>PREÇO</th><th>MARGEM (%)</th><th>VENDAS</th><th>META</th><th>AÇÕES</th></tr></thead>
                             <tbody id="sim-table-body"></tbody>
                         </table>
                     </div>
@@ -341,23 +262,10 @@
 
         <!-- ======================= ESTOQUE ======================= -->
         <div id="stock-content" class="content-section">
-            <div class="crm-header">
-                <h2>CONTROLE DE ESTOQUE</h2>
-                <button class="btn-modern btn-primary" onclick="openStockModal()">+ NOVO ITEM</button>
-            </div>
+            <div class="crm-header"><h2>ESTOQUE</h2><button class="btn-modern btn-primary" onclick="openStockModal()">+ NOVO ITEM</button></div>
             <div class="table-container">
-                <table class="crm-table">
-                    <thead>
-                        <tr>
-                            <th>ITEM</th>
-                            <th>CATEGORIA</th>
-                            <th>QTD ATUAL</th>
-                            <th>MÍNIMO</th>
-                            <th>VALOR UNIT.</th>
-                            <th>TOTAL</th>
-                            <th>AÇÕES</th>
-                        </tr>
-                    </thead>
+                <table class="modern-table">
+                    <thead><tr><th>ITEM</th><th>CATEGORIA</th><th>QTD</th><th>MÍN</th><th>VALOR</th><th>TOTAL</th><th>AÇÕES</th></tr></thead>
                     <tbody id="stock-table-body"></tbody>
                 </table>
             </div>
@@ -365,34 +273,31 @@
 
         <!-- ======================= CONFIGURAÇÕES ======================= -->
         <div id="settings-content" class="content-section">
-            <header>
-                <h2>CONFIGURAÇÕES DO SISTEMA</h2>
-            </header>
+            <header><h2>CONFIGURAÇÕES</h2></header>
             <div class="settings-grid">
                 <div class="settings-card">
-                    <h3>Personalizar Etapas do CRM</h3>
-                    <div class="field-group"><label>Etapa 1</label><input type="text" id="set-step-1" onchange="saveSettings()"></div>
-                    <div class="field-group"><label>Etapa 2</label><input type="text" id="set-step-2" onchange="saveSettings()"></div>
-                    <div class="field-group"><label>Etapa 3</label><input type="text" id="set-step-3" onchange="saveSettings()"></div>
-                    <div class="field-group"><label>Etapa 4</label><input type="text" id="set-step-4" onchange="saveSettings()"></div>
-                    <div class="field-group"><label>Etapa 5</label><input type="text" id="set-step-5" onchange="saveSettings()"></div>
+                    <h3>Etapas CRM</h3>
+                    <div class="field-group"><input type="text" id="set-step-1" onchange="saveSettings()"></div>
+                    <div class="field-group"><input type="text" id="set-step-2" onchange="saveSettings()"></div>
+                    <div class="field-group"><input type="text" id="set-step-3" onchange="saveSettings()"></div>
+                    <div class="field-group"><input type="text" id="set-step-4" onchange="saveSettings()"></div>
+                    <div class="field-group"><input type="text" id="set-step-5" onchange="saveSettings()"></div>
                 </div>
                 <div class="settings-card">
-                    <h3>Rótulos do Simulador</h3>
-                    <div class="field-group"><label>Campo 1</label><input type="text" id="set-label-1" onchange="saveSettings()"></div>
-                    <div class="field-group"><label>Campo 2</label><input type="text" id="set-label-2" onchange="saveSettings()"></div>
-                    <div class="field-group"><label>Campo 3</label><input type="text" id="set-label-3" onchange="saveSettings()"></div>
-                    <div class="field-group"><label>Campo 4</label><input type="text" id="set-label-4" onchange="saveSettings()"></div>
+                    <h3>Rótulos Simulador</h3>
+                    <div class="field-group"><input type="text" id="set-label-1" onchange="saveSettings()"></div>
+                    <div class="field-group"><input type="text" id="set-label-2" onchange="saveSettings()"></div>
+                    <div class="field-group"><input type="text" id="set-label-3" onchange="saveSettings()"></div>
+                    <div class="field-group"><input type="text" id="set-label-4" onchange="saveSettings()"></div>
                 </div>
                 <div class="settings-card">
                     <h3>Categorias Financeiras</h3>
                     <div id="settings-categories-list"></div>
-                    <button class="btn-modern btn-primary" onclick="addCategory()">+ ADICIONAR CATEGORIA</button>
+                    <button class="btn-modern btn-primary" onclick="addCategory()" style="width:100%">+ ADICIONAR CATEGORIA</button>
                 </div>
                 <div class="settings-card">
-                    <h3>Backup e Dados</h3>
-                    <p style="color:var(--text-secondary); font-size:0.8rem; margin-bottom:15px;">Ações irreversíveis para gerenciamento de dados.</p>
-                    <button class="btn-modern btn-danger" onclick="resetSystem()"><i class="fa-solid fa-triangle-exclamation"></i> RESETAR TODOS OS DADOS</button>
+                    <h3>Sistema</h3>
+                    <button class="btn-modern btn-danger" onclick="resetSystem()" style="width:100%"><i class="fa-solid fa-triangle-exclamation"></i> RESETAR TUDO</button>
                 </div>
             </div>
         </div>
@@ -400,148 +305,57 @@
 
     <!-- ======================= MODAIS ======================= -->
     <div id="modal-overlay" class="modal-overlay" onclick="closeAllModals()">
-        <!-- Modal CRM -->
         <div id="lead-modal" class="modal-modern" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3 id="lead-modal-title">NOVO CLIENTE</h3>
-                <button class="close-btn" onclick="closeLeadModal()">&times;</button>
-            </div>
+            <div class="modal-header"><h3 id="lead-modal-title">LEAD</h3><button class="close-btn" onclick="closeLeadModal()">&times;</button></div>
             <div class="modal-body">
-                <div class="field-group">
-                    <label>Nome do Cliente</label>
-                    <input type="text" id="m_cliente" placeholder="Ex: João Silva">
+                <div class="field-group"><label>Cliente</label><input type="text" id="m_cliente"></div>
+                <div class="field-row">
+                    <div class="field-group"><label>Empresa</label><input type="text" id="m_empresa"></div>
+                    <div class="field-group"><label>Status</label><select id="m_status"><option value="0" id="opt-step-1">1</option><option value="1" id="opt-step-2">2</option><option value="2" id="opt-step-3">3</option><option value="3" id="opt-step-4">4</option><option value="4" id="opt-step-5">5</option></select></div>
                 </div>
                 <div class="field-row">
-                    <div class="field-group">
-                        <label>Empresa</label>
-                        <input type="text" id="m_empresa" placeholder="Opcional">
-                    </div>
-                    <div class="field-group">
-                        <label>Status Atual</label>
-                        <select id="m_status">
-                            <option value="0" id="opt-step-1">Passo 1</option>
-                            <option value="1" id="opt-step-2">Passo 2</option>
-                            <option value="2" id="opt-step-3">Passo 3</option>
-                            <option value="3" id="opt-step-4">Passo 4</option>
-                            <option value="4" id="opt-step-5">Passo 5</option>
-                        </select>
-                    </div>
+                    <div class="field-group"><label>Origem</label><select id="m_origem"><option value="WhatsApp">WhatsApp</option><option value="Instagram">Instagram</option><option value="Indicação">Indicação</option><option value="Site">Site</option><option value="Outros">Outros</option></select></div>
+                    <div class="field-group"><label>Entrega</label><input type="date" id="m_entrega"></div>
                 </div>
                 <div class="field-row">
-                    <div class="field-group">
-                        <label>Origem</label>
-                        <select id="m_origem">
-                            <option value="WhatsApp">WhatsApp</option>
-                            <option value="Instagram">Instagram</option>
-                            <option value="Indicação">Indicação</option>
-                            <option value="Site">Site</option>
-                            <option value="Outros">Outros</option>
-                        </select>
-                    </div>
-                    <div class="field-group">
-                        <label>Data Entrega</label>
-                        <input type="date" id="m_entrega">
-                    </div>
+                    <div class="field-group"><label>Valor (R$)</label><input type="number" id="m_valor"></div>
+                    <div class="field-group"><label>Lucro (R$)</label><input type="number" id="m_lucro"></div>
                 </div>
-                <div class="field-row">
-                    <div class="field-group">
-                        <label>Valor Total (R$)</label>
-                        <input type="number" id="m_valor" placeholder="0.00">
-                    </div>
-                    <div class="field-group">
-                        <label>Lucro Real (R$)</label>
-                        <input type="number" id="m_lucro" placeholder="0.00">
-                    </div>
-                </div>
-                <div class="field-group">
-                    <label>Resultado do Negócio</label>
-                    <div class="btn-group-modern">
-                        <button id="btn-venda" class="btn-modern" onclick="setResult('Venda')"><i class="fa-solid fa-check"></i> VENDA</button>
-                        <button id="btn-perda" class="btn-modern" onclick="setResult('Perda')"><i class="fa-solid fa-xmark"></i> PERDA</button>
-                    </div>
-                </div>
-                <input type="hidden" id="m_lead_id">
-                <input type="hidden" id="m_resultado">
+                <div class="field-group"><label>Resultado</label><div class="btn-group-modern"><button id="btn-venda" class="btn-modern" onclick="setResult('Venda')">VENDA</button><button id="btn-perda" class="btn-modern" onclick="setResult('Perda')">PERDA</button></div></div>
+                <input type="hidden" id="m_lead_id"><input type="hidden" id="m_resultado">
             </div>
-            <div class="modal-footer" style="justify-content: space-between;">
-                <button class="btn-modern btn-danger" id="btn-delete-lead" onclick="deleteLead()"><i class="fa-solid fa-trash"></i> EXCLUIR</button>
-                <div style="display:flex; gap:12px;">
-                    <button class="btn-modern" onclick="closeLeadModal()">CANCELAR</button>
-                    <button class="btn-modern btn-primary" onclick="saveLead()">SALVAR</button>
-                </div>
-            </div>
+            <div class="modal-footer"><button class="btn-modern btn-danger" id="btn-delete-lead" onclick="deleteLead()">EXCLUIR</button><div style="display:flex; gap:10px;"><button class="btn-modern" onclick="closeLeadModal()">SAIR</button><button class="btn-modern btn-primary" onclick="saveLead()">SALVAR</button></div></div>
         </div>
 
-        <!-- Modal Financeiro -->
         <div id="finance-modal" class="modal-modern" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3 id="fin-modal-title">NOVA TRANSAÇÃO</h3>
-                <button class="close-btn" onclick="closeFinanceModal()">&times;</button>
-            </div>
+            <div class="modal-header"><h3 id="fin-modal-title">FINANÇA</h3><button class="close-btn" onclick="closeFinanceModal()">&times;</button></div>
             <div class="modal-body">
-                <div class="field-group">
-                    <label>Descrição</label>
-                    <input type="text" id="f_desc" placeholder="Ex: Compra de Acrílico">
-                </div>
+                <div class="field-group"><label>Descrição</label><input type="text" id="f_desc"></div>
                 <div class="field-row">
-                    <div class="field-group">
-                        <label>Valor (R$)</label>
-                        <input type="number" id="f_valor" placeholder="0.00">
-                    </div>
-                    <div class="field-group">
-                        <label>Categoria</label>
-                        <select id="f_cat_select"></select>
-                    </div>
+                    <div class="field-group"><label>Valor</label><input type="number" id="f_valor"></div>
+                    <div class="field-group"><label>Categoria</label><select id="f_cat_select"></select></div>
                 </div>
-                <div class="field-group">
-                    <label>Data</label>
-                    <input type="date" id="f_data">
-                </div>
+                <div class="field-group"><label>Data</label><input type="date" id="f_data"></div>
                 <input type="hidden" id="f_tipo">
             </div>
-            <div class="modal-footer">
-                <button class="btn-modern" onclick="closeFinanceModal()">CANCELAR</button>
-                <button class="btn-modern btn-primary" onclick="saveTransaction()">SALVAR</button>
-            </div>
+            <div class="modal-footer"><button class="btn-modern" onclick="closeFinanceModal()">SAIR</button><button class="btn-modern btn-primary" onclick="saveTransaction()">SALVAR</button></div>
         </div>
 
-        <!-- Modal Estoque -->
         <div id="stock-modal" class="modal-modern" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3 id="stock-modal-title">ITEM DE ESTOQUE</h3>
-                <button class="close-btn" onclick="closeStockModal()">&times;</button>
-            </div>
+            <div class="modal-header"><h3>ESTOQUE</h3><button class="close-btn" onclick="closeStockModal()">&times;</button></div>
             <div class="modal-body">
-                <div class="field-group">
-                    <label>Nome do Item</label>
-                    <input type="text" id="s_nome" placeholder="Ex: Chapa Acrílico 3mm">
+                <div class="field-group"><label>Nome</label><input type="text" id="s_nome"></div>
+                <div class="field-row">
+                    <div class="field-group"><label>Categoria</label><input type="text" id="s_cat"></div>
+                    <div class="field-group"><label>Valor Unit.</label><input type="number" id="s_valor"></div>
                 </div>
                 <div class="field-row">
-                    <div class="field-group">
-                        <label>Categoria</label>
-                        <input type="text" id="s_cat" placeholder="Ex: Chapas">
-                    </div>
-                    <div class="field-group">
-                        <label>Valor Unitário (R$)</label>
-                        <input type="number" id="s_valor" placeholder="0.00">
-                    </div>
-                </div>
-                <div class="field-row">
-                    <div class="field-group">
-                        <label>Quantidade Atual</label>
-                        <input type="number" id="s_qtd" placeholder="0">
-                    </div>
-                    <div class="field-group">
-                        <label>Estoque Mínimo</label>
-                        <input type="number" id="s_min" placeholder="0">
-                    </div>
+                    <div class="field-group"><label>Qtd</label><input type="number" id="s_qtd"></div>
+                    <div class="field-group"><label>Mínimo</label><input type="number" id="s_min"></div>
                 </div>
                 <input type="hidden" id="s_item_id">
             </div>
-            <div class="modal-footer">
-                <button class="btn-modern" onclick="closeStockModal()">CANCELAR</button>
-                <button class="btn-modern btn-primary" onclick="saveStockItem()">SALVAR</button>
-            </div>
+            <div class="modal-footer"><button class="btn-modern" onclick="closeStockModal()">SAIR</button><button class="btn-modern btn-primary" onclick="saveStockItem()">SALVAR</button></div>
         </div>
     </div>
 
