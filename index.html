@@ -17,12 +17,11 @@
             <div class="logo-circle">
                 <img id="main-logo-img" src="" alt="Santo Laser Logo" class="main-logo">
             </div>
-            <h1 style="font-family:'Orbitron'; color:var(--neon); font-size:1.2rem; margin:0;">SANTO LASER</h1>
+            <h1 class="sidebar-title">SANTO LASER</h1>
         </div>
         <nav>
             <a href="#" class="nav-item active" onclick="showSection('dashboard')"><i class="fa-solid fa-chart-line"></i> DASHBOARD</a>
             <a href="#" class="nav-item" onclick="showSection('crm')"><i class="fa-solid fa-users"></i> CRM</a>
-            <a href="#" class="nav-item" onclick="showSection('timeline')"><i class="fa-solid fa-calendar-days"></i> TIMELINE</a>
             <a href="#" class="nav-item" onclick="showSection('calculator')"><i class="fa-solid fa-calculator"></i> CALCULADORA OS</a>
             <a href="#" class="nav-item" onclick="showSection('cashflow')"><i class="fa-solid fa-money-bill-transfer"></i> FLUXO DE CAIXA</a>
             <a href="#" class="nav-item" onclick="showSection('simulator')"><i class="fa-solid fa-bullseye"></i> SIMULADOR METAS</a>
@@ -75,6 +74,14 @@
                     </div>
                 </div>
             </div>
+            <div class="dashboard-timeline">
+                <div class="chart-container">
+                    <h3>Linha do Tempo de Projetos</h3>
+                    <div id="timeline-wrapper" class="timeline-container">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- ======================= CRM ======================= -->
@@ -124,16 +131,6 @@
                     </thead>
                     <tbody id="crm-table-body"></tbody>
                 </table>
-            </div>
-        </div>
-
-        <!-- ======================= TIMELINE ======================= -->
-        <div id="timeline-content" class="content-section">
-            <header>
-                <h2>LINHA DO TEMPO DE PROJETOS</h2>
-            </header>
-            <div class="timeline-container" id="timeline-wrapper">
-                <!-- Preenchido via JS -->
             </div>
         </div>
 
@@ -193,7 +190,7 @@
                 <div class="calc-preview-side">
                     <div class="quote-card" id="quote-to-print">
                         <div class="quote-header">
-                            <img id="quote-logo-img" src="" alt="Logo" style="height:50px">
+                            <img id="quote-logo-img" src="" alt="Logo" style="height:60px">
                             <div style="text-align:right">
                                 <h2 style="margin:0; color:var(--neon); font-family:'Orbitron'">ORÇAMENTO</h2>
                                 <small id="display_data_proposta"></small>
@@ -251,9 +248,11 @@
             <div class="filter-bar">
                 <div class="filter-group">
                     <label>Período</label>
-                    <input type="date" id="filter-start" onchange="renderFinance()">
-                    <span>até</span>
-                    <input type="date" id="filter-end" onchange="renderFinance()">
+                    <div class="date-inputs">
+                        <input type="date" id="filter-start" onchange="renderFinance()">
+                        <span>até</span>
+                        <input type="date" id="filter-end" onchange="renderFinance()">
+                    </div>
                 </div>
                 <div class="filter-group">
                     <label>Tipo</label>
@@ -392,6 +391,7 @@
                 </div>
                 <div class="settings-card">
                     <h3>Backup e Dados</h3>
+                    <p style="color:var(--text-secondary); font-size:0.8rem; margin-bottom:15px;">Ações irreversíveis para gerenciamento de dados.</p>
                     <button class="btn-modern btn-danger" onclick="resetSystem()"><i class="fa-solid fa-triangle-exclamation"></i> RESETAR TODOS OS DADOS</button>
                 </div>
             </div>

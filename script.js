@@ -45,7 +45,6 @@ function updateCurrentDate() {
     document.getElementById('current-date').innerText = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
-// Formatação BRL Profissional
 function formatBRL(val) {
     return parseFloat(val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -67,7 +66,6 @@ function showSection(sectionId) {
     if (sectionId === 'cashflow') renderFinance();
     if (sectionId === 'simulator') runSimulator();
     if (sectionId === 'stock') renderStock();
-    if (sectionId === 'timeline') renderTimeline();
     if (sectionId === 'settings') loadSettingsPage();
 }
 
@@ -93,7 +91,6 @@ function toggleTheme() {
 // ================================================================================= //
 
 function applySettings() {
-    // Aplicar nomes das etapas no CRM e Modais
     for (let i = 0; i < 5; i++) {
         const label = document.getElementById(`label-step-${i+1}`);
         const opt = document.getElementById(`opt-step-${i+1}`);
@@ -101,7 +98,6 @@ function applySettings() {
         if (opt) opt.innerText = settings.steps[i];
     }
 
-    // Aplicar rótulos do Simulador
     const labels = [
         {id: 'label-prolabore', text: settings.simLabels[0]},
         {id: 'label-custos-fixos', text: settings.simLabels[1]},
@@ -113,7 +109,6 @@ function applySettings() {
         if (el) el.innerText = `${l.text} (R$)`;
     });
 
-    // Atualizar categorias no filtro e no modal financeiro
     const filterCat = document.getElementById('filter-cat');
     const modalCat = document.getElementById('f_cat_select');
     if (filterCat && modalCat) {
@@ -141,10 +136,11 @@ function renderSettingsCategories() {
     list.innerHTML = "";
     settings.categories.forEach((cat, idx) => {
         const div = document.createElement('div');
-        div.className = 'field-row';
+        div.style.display = 'flex';
+        div.style.gap = '10px';
         div.style.marginBottom = '10px';
         div.innerHTML = `
-            <input type="text" value="${cat}" onchange="updateCategory(${idx}, this.value)">
+            <input type="text" value="${cat}" onchange="updateCategory(${idx}, this.value)" style="flex:1">
             <button class="btn-modern btn-danger" onclick="removeCategory(${idx})"><i class="fa-solid fa-trash"></i></button>
         `;
         list.appendChild(div);
@@ -179,14 +175,14 @@ function updateDashboard() {
     const currentYear = now.getFullYear();
 
     const paidLeadsMonth = leads.filter(l => {
-        if (l.status != 4 || !l.entrega || l.resultado === 'Perda') return false; // 4 = Pago
+        if (l.status != 4 || !l.entrega || l.resultado === 'Perda') return false;
         const d = new Date(l.entrega + 'T00:00:00');
         return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
 
     const faturamento = paidLeadsMonth.reduce((acc, l) => acc + parseFloat(l.valor || 0), 0);
     const lucro = paidLeadsMonth.reduce((acc, l) => acc + parseFloat(l.lucro || 0), 0);
-    const pedidosAtivos = leads.filter(l => (l.status == 1 || l.status == 2) && l.resultado !== 'Perda').length; // 1=Aprovado, 2=Produção
+    const pedidosAtivos = leads.filter(l => (l.status == 1 || l.status == 2) && l.resultado !== 'Perda').length;
     
     const totalFinalizados = leads.filter(l => l.status == 4 || l.resultado === 'Perda').length;
     const totalVendas = leads.filter(l => l.status == 4 && l.resultado === 'Venda').length;
@@ -198,6 +194,7 @@ function updateDashboard() {
     document.getElementById('dash-conversao').innerText = `${conversao}%`;
     
     renderCharts();
+    renderTimeline();
 }
 
 function renderCharts() {
@@ -250,6 +247,43 @@ function renderCharts() {
     }
 }
 
+function renderTimeline() {
+    const container = document.getElementById('timeline-wrapper');
+    if (!container) return;
+    container.innerHTML = "";
+    
+    const activeLeads = leads.filter(l => (l.status == 1 || l.status == 2) && l.entrega && l.resultado !== 'Perda');
+    
+    if (activeLeads.length === 0) {
+        container.innerHTML = "<p style='text-align:center; padding:40px; color:var(--text-secondary)'>Nenhum pedido em produção com data de entrega definida.</p>";
+        return;
+    }
+
+    activeLeads.sort((a, b) => new Date(a.entrega) - new Date(b.entrega));
+
+    activeLeads.forEach(l => {
+        const row = document.createElement('div');
+        row.className = 'timeline-row';
+        
+        const entrega = new Date(l.entrega + 'T00:00:00');
+        const hoje = new Date();
+        const diffDays = Math.ceil((entrega - hoje) / (1000 * 60 * 60 * 24));
+        
+        const barWidth = Math.max(diffDays * 40, 120);
+        
+        row.innerHTML = `
+            <div class="timeline-client">${l.cliente}</div>
+            <div class="timeline-track">
+                <div class="timeline-bar" style="width: ${Math.min(barWidth, 500)}px; background: ${diffDays < 0 ? 'var(--danger)' : 'var(--neon)'}">
+                    ${diffDays < 0 ? 'ATRASADO' : `ENTREGA EM ${diffDays} DIAS`}
+                </div>
+            </div>
+            <div style="width:120px; text-align:right; font-size:0.8rem; color:var(--text-secondary)">${entrega.toLocaleDateString('pt-BR')}</div>
+        `;
+        container.appendChild(row);
+    });
+}
+
 // ================================================================================= //
 //                                        CRM                                        //
 // ================================================================================= //
@@ -274,17 +308,17 @@ function renderCRM() {
             card.id = `lead-${lead.id}`;
             card.ondragstart = (e) => {
                 e.dataTransfer.setData("text", lead.id);
-                setTimeout(() => card.style.display = 'none', 0);
+                setTimeout(() => card.style.opacity = '0.4', 0);
             };
-            card.ondragend = () => card.style.display = 'block';
+            card.ondragend = () => card.style.opacity = '1';
             card.onclick = () => editLead(lead.id);
             
             card.innerHTML = `
-                <div class="card-title">${lead.cliente}</div>
-                ${lead.empresa ? `<div class="card-company">${lead.empresa}</div>` : ''}
-                <div class="card-meta">
-                    <span class="tag price">${formatBRL(lead.valor)}</span>
-                    ${lead.entrega ? `<span class="tag date">${new Date(lead.entrega + 'T00:00:00').toLocaleDateString('pt-BR')}</span>` : ''}
+                <div class="card-title" style="font-weight:800; margin-bottom:10px;">${lead.cliente}</div>
+                ${lead.empresa ? `<div class="card-company" style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:10px;">${lead.empresa}</div>` : ''}
+                <div class="card-meta" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:var(--neon); font-weight:700; font-size:0.85rem;">${formatBRL(lead.valor)}</span>
+                    ${lead.entrega ? `<span style="font-size:0.7rem; opacity:0.7;"><i class="fa-regular fa-calendar"></i> ${new Date(lead.entrega + 'T00:00:00').toLocaleDateString('pt-BR')}</span>` : ''}
                 </div>
             `;
             column.appendChild(card);
@@ -314,7 +348,6 @@ function drop(e, newStatus) {
     if (lead) {
         lead.status = newStatus;
         renderCRM();
-        renderFinance();
         updateDashboard();
     }
 }
@@ -381,7 +414,6 @@ function saveLead() {
     }
 
     renderCRM();
-    renderFinance();
     updateDashboard();
     closeLeadModal();
 }
@@ -407,10 +439,10 @@ function setResult(res) {
 function updateResultButtons(val) {
     const btnVenda = document.getElementById('btn-venda');
     const btnPerda = document.getElementById('btn-perda');
-    btnVenda.classList.remove('active-venda');
-    btnPerda.classList.remove('active-perda');
-    if (val === 'Venda') btnVenda.classList.add('active-venda');
-    if (val === 'Perda') btnPerda.classList.add('active-perda');
+    btnVenda.style.background = val === 'Venda' ? 'var(--success)' : '';
+    btnVenda.style.color = val === 'Venda' ? '#fff' : '';
+    btnPerda.style.background = val === 'Perda' ? 'var(--danger)' : '';
+    btnPerda.style.color = val === 'Perda' ? '#fff' : '';
 }
 
 function closeLeadModal() {
@@ -431,48 +463,6 @@ function toggleCRMView() {
 }
 
 // ================================================================================= //
-//                                   TIMELINE                                        //
-// ================================================================================= //
-
-function renderTimeline() {
-    const container = document.getElementById('timeline-wrapper');
-    container.innerHTML = "";
-    
-    // Filtra apenas pedidos em andamento (Aprovado e Produção)
-    const activeLeads = leads.filter(l => (l.status == 1 || l.status == 2) && l.entrega && l.resultado !== 'Perda');
-    
-    if (activeLeads.length === 0) {
-        container.innerHTML = "<p style='text-align:center; padding:40px; color:var(--text-secondary)'>Nenhum pedido em produção com data de entrega definida.</p>";
-        return;
-    }
-
-    activeLeads.sort((a, b) => new Date(a.entrega) - new Date(b.entrega));
-
-    activeLeads.forEach(l => {
-        const row = document.createElement('div');
-        row.className = 'timeline-row';
-        
-        const entrega = new Date(l.entrega + 'T00:00:00');
-        const hoje = new Date();
-        const diffDays = Math.ceil((entrega - hoje) / (1000 * 60 * 60 * 24));
-        
-        // Calcula largura da barra (exemplo: 1 dia = 50px)
-        const barWidth = Math.max(diffDays * 30, 100);
-        
-        row.innerHTML = `
-            <div class="timeline-client">${l.cliente}</div>
-            <div class="timeline-track">
-                <div class="timeline-bar" style="width: ${Math.min(barWidth, 600)}px">
-                    ${diffDays < 0 ? 'ATRASADO' : `ENTREGA EM ${diffDays} DIAS`}
-                </div>
-            </div>
-            <div style="width:100px; text-align:right; font-size:0.8rem">${entrega.toLocaleDateString('pt-BR')}</div>
-        `;
-        container.appendChild(row);
-    });
-}
-
-// ================================================================================= //
 //                                   CALCULADORA                                     //
 // ================================================================================= //
 
@@ -488,23 +478,27 @@ function renderItems() {
     items.forEach((item, idx) => {
         const div = document.createElement('div');
         div.className = 'item-block';
+        div.style.background = 'rgba(255,255,255,0.02)';
+        div.style.padding = '15px';
+        div.style.borderRadius = '10px';
+        div.style.marginBottom = '15px';
+        div.style.border = '1px solid var(--border-color)';
         div.innerHTML = `
-            <div class="item-header">
-                <strong>Item #${idx + 1}</strong>
-                <span class="remove-item" onclick="removeItem(${item.id})">REMOVER</span>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <strong style="font-size:0.8rem; color:var(--neon)">ITEM #${idx + 1}</strong>
+                <span onclick="removeItem(${item.id})" style="color:var(--danger); cursor:pointer; font-size:0.7rem; font-weight:800;">REMOVER</span>
             </div>
             <div class="field-group">
-                <label>Descrição do Item</label>
-                <input type="text" value="${item.nome}" oninput="updateItem(${item.id}, 'nome', this.value)" placeholder="Ex: Luminária de Acrílico">
+                <input type="text" value="${item.nome}" oninput="updateItem(${item.id}, 'nome', this.value)" placeholder="Descrição do Item">
             </div>
-            <div class="field-row">
-                <div class="field-group"><label>Quantidade</label><input type="number" value="${item.qtd}" oninput="updateItem(${item.id}, 'qtd', this.value)"></div>
-                <div class="field-group"><label>Custo Material (R$)</label><input type="number" value="${item.mat}" oninput="updateItem(${item.id}, 'mat', this.value)"></div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                <div class="field-group"><label>Qtd</label><input type="number" value="${item.qtd}" oninput="updateItem(${item.id}, 'qtd', this.value)"></div>
+                <div class="field-group"><label>Material (R$)</label><input type="number" value="${item.mat}" oninput="updateItem(${item.id}, 'mat', this.value)"></div>
             </div>
-            <div class="field-row">
-                <div class="field-group"><label>Tempo Arte (min)</label><input type="number" value="${item.arte}" oninput="updateItem(${item.id}, 'arte', this.value)"></div>
-                <div class="field-group"><label>Tempo Setup (min)</label><input type="number" value="${item.setup}" oninput="updateItem(${item.id}, 'setup', this.value)"></div>
-                <div class="field-group"><label>Corte/Grav (min)</label><input type="number" value="${item.grav}" oninput="updateItem(${item.id}, 'grav', this.value)"></div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-top:10px;">
+                <div class="field-group"><label>Arte</label><input type="number" value="${item.arte}" oninput="updateItem(${item.id}, 'arte', this.value)"></div>
+                <div class="field-group"><label>Setup</label><input type="number" value="${item.setup}" oninput="updateItem(${item.id}, 'setup', this.value)"></div>
+                <div class="field-group"><label>Laser</label><input type="number" value="${item.grav}" oninput="updateItem(${item.id}, 'grav', this.value)"></div>
             </div>
         `;
         list.appendChild(div);
@@ -637,7 +631,7 @@ function renderFinance() {
         row.innerHTML = `
             <td>${new Date(t.data + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
             <td>${t.desc}</td>
-            <td><span class="tag ${t.tipo === 'Entrada' ? 'price' : 'date'}" style="color:${t.tipo === 'Entrada' ? 'var(--success)' : 'var(--danger)'}">${t.tipo.toUpperCase()}</span></td>
+            <td><span class="tag" style="color:${t.tipo === 'Entrada' ? 'var(--success)' : 'var(--danger)'}">${t.tipo.toUpperCase()}</span></td>
             <td>${t.cat}</td>
             <td>${formatBRL(t.valor)}</td>
             <td>
@@ -726,10 +720,10 @@ function runSimulator() {
         
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td><input type="text" value="${item.nome}" onchange="updateSimItem(${item.id}, 'nome', this.value)" placeholder="Nome do Produto"></td>
-            <td><input type="number" value="${item.preco}" onchange="updateSimItem(${item.id}, 'preco', this.value)"></td>
-            <td><input type="number" value="${item.margem}" onchange="updateSimItem(${item.id}, 'margem', this.value)">%</td>
-            <td><input type="number" value="${item.atual}" onchange="updateSimItem(${item.id}, 'atual', this.value)"></td>
+            <td><input type="text" value="${item.nome}" onchange="updateSimItem(${item.id}, 'nome', this.value)" style="background:transparent; border:none; color:inherit;"></td>
+            <td><input type="number" value="${item.preco}" onchange="updateSimItem(${item.id}, 'preco', this.value)" style="background:transparent; border:none; color:inherit; width:100px;"></td>
+            <td><input type="number" value="${item.margem}" onchange="updateSimItem(${item.id}, 'margem', this.value)" style="background:transparent; border:none; color:inherit; width:60px;">%</td>
+            <td><input type="number" value="${item.atual}" onchange="updateSimItem(${item.id}, 'atual', this.value)" style="background:transparent; border:none; color:inherit; width:60px;"></td>
             <td><strong>${vendasNecessarias}</strong></td>
             <td><button class="btn-modern btn-danger" onclick="removeSimItem(${item.id})"><i class="fa-solid fa-trash"></i></button></td>
         `;
