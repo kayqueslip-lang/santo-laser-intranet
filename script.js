@@ -1,6 +1,5 @@
-
 // ================================================================================= //
-//                                 ESTADO GLOBAL                                     //
+//                                     ESTADO GLOBAL                                 //
 // ================================================================================= //
 
 let leads = JSON.parse(localStorage.getItem('santo_leads')) || [];
@@ -10,11 +9,27 @@ let stockItems = JSON.parse(localStorage.getItem('santo_stock_items')) || [];
 let initialBalance = parseFloat(localStorage.getItem('santo_initial_balance')) || 0;
 let items = []; // Itens da calculadora atual
 
+// Logo em Base64 (integrada para evitar erro 404)
+const LOGO_BASE64 = "data:image/jpeg;base64," + localStorage.getItem('santo_logo_cache') || "";
+
 // ================================================================================= //
 //                                 INICIALIZAÇÃO                                     //
 // ================================================================================= //
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Tenta carregar a logo do arquivo gerado se não estiver no cache
+    fetch('logo_base64.txt').then(r => r.text()).then(base64 => {
+        if (base64) {
+            const fullBase64 = "data:image/jpeg;base64," + base64;
+            localStorage.setItem('santo_logo_cache', base64);
+            document.getElementById('main-logo-img').src = fullBase64;
+            document.getElementById('quote-logo-img').src = fullBase64;
+        }
+    }).catch(() => {
+        // Fallback se falhar
+        document.getElementById('main-logo-img').src = "https://via.placeholder.com/80?text=SL";
+    });
+
     updateCurrentDate();
     renderCRM();
     renderFinance();
@@ -29,22 +44,40 @@ function updateCurrentDate() {
     document.getElementById('current-date').innerText = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
+// ================================================================================= //
+//                                     NAVEGAÇÃO                                     //
+// ================================================================================= //
+
 function showSection(sectionId) {
+    closeAllModals(); // Fecha modais ao trocar de aba
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     
     document.getElementById(`${sectionId}-content`).classList.add('active');
-    document.querySelector(`[onclick="showSection('${sectionId}')"]`).classList.add('active');
+    event.currentTarget.classList.add('active');
+    
+    if (sectionId === 'dashboard') updateDashboard();
+    if (sectionId === 'crm') renderCRM();
+    if (sectionId === 'cashflow') renderFinance();
+    if (sectionId === 'simulator') runSimulator();
+    if (sectionId === 'stock') renderStock();
+}
+
+function closeAllModals() {
+    document.getElementById('modal-overlay').style.display = 'none';
+    document.querySelectorAll('.modal-modern').forEach(m => m.style.display = 'none');
 }
 
 function toggleTheme() {
     const html = document.documentElement;
-    const isDark = html.getAttribute('data-theme') === 'dark';
-    const newTheme = isDark ? 'light' : 'dark';
-    html.setAttribute('data-theme', newTheme);
+    const current = html.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
     
     const btn = document.getElementById('theme-toggle');
-    btn.innerHTML = isDark ? '<i class="fa-solid fa-sun"></i> <span>MODO CLARO</span>' : '<i class="fa-solid fa-moon"></i> <span>MODO ESCURO</span>';
+    btn.innerHTML = next === 'dark' ? 
+        '<i class="fa-solid fa-moon"></i> <span>MODO ESCURO</span>' : 
+        '<i class="fa-solid fa-sun"></i> <span>MODO CLARO</span>';
 }
 
 // ================================================================================= //
@@ -56,7 +89,6 @@ function updateDashboard() {
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    // Filtra leads pagos (Venda) no mês atual
     const paidLeadsMonth = leads.filter(l => {
         if (l.status !== 'Pago' || !l.entrega || l.resultado === 'Perda') return false;
         const d = new Date(l.entrega + 'T00:00:00');
@@ -65,8 +97,6 @@ function updateDashboard() {
 
     const faturamento = paidLeadsMonth.reduce((acc, l) => acc + parseFloat(l.valor || 0), 0);
     const lucro = paidLeadsMonth.reduce((acc, l) => acc + parseFloat(l.lucro || 0), 0);
-    
-    // Pedidos Ativos: Aprovado ou Produção
     const pedidosAtivos = leads.filter(l => l.status === 'Aprovado' || l.status === 'Produção').length;
     
     const totalFinalizados = leads.filter(l => l.status === 'Pago' || l.resultado === 'Perda').length;
@@ -83,10 +113,11 @@ function updateDashboard() {
 
 function renderCharts() {
     const ctxOrigem = document.getElementById('chart-origem');
-    if (!ctxOrigem) return;
+    const ctxStatus = document.getElementById('chart-status');
+    if (!ctxOrigem || !ctxStatus) return;
     
-    // Simples placeholder para gráfico real se Chart.js estiver carregado
     if (window.Chart) {
+        // Gráfico de Origem
         if (window.myChartOrigem) window.myChartOrigem.destroy();
         const origens = {};
         leads.forEach(l => origens[l.origem] = (origens[l.origem] || 0) + 1);
@@ -94,13 +125,40 @@ function renderCharts() {
         window.myChartOrigem = new Chart(ctxOrigem, {
             type: 'doughnut',
             data: {
-                labels: Object.keys(origens),
+                labels: Object.keys(origens).length ? Object.keys(origens) : ['Sem dados'],
                 datasets: [{
-                    data: Object.values(origens),
-                    backgroundColor: ['#00e6cb', '#ff1744', '#ffea00', '#00c853', '#2979ff']
+                    data: Object.values(origens).length ? Object.values(origens) : [1],
+                    backgroundColor: ['#00e6cb', '#ff1744', '#ffea00', '#00c853', '#2979ff'],
+                    borderWidth: 0
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } } }
+        });
+
+        // Gráfico de Status
+        if (window.myChartStatus) window.myChartStatus.destroy();
+        const statusCount = {};
+        leads.forEach(l => statusCount[l.status] = (statusCount[l.status] || 0) + 1);
+
+        window.myChartStatus = new Chart(ctxStatus, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(statusCount),
+                datasets: [{
+                    label: 'Leads',
+                    data: Object.values(statusCount),
+                    backgroundColor: '#00e6cb'
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { 
+                    y: { beginAtZero: true, grid: { color: '#2d333f' }, ticks: { color: '#94a3b8' } },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                },
+                plugins: { legend: { display: false } }
+            }
         });
     }
 }
@@ -115,7 +173,6 @@ function renderCRM() {
     if (tableBody) tableBody.innerHTML = "";
 
     statuses.forEach(status => {
-        // Correção do ID da coluna (removendo acentos e espaços)
         const columnId = `cards-${status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-')}`;
         const countId = `count-${status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-')}`;
         
@@ -125,7 +182,6 @@ function renderCRM() {
         if (!column) return;
         column.innerHTML = "";
         
-        // Filtra leads ativos (não excluídos e não perda, a menos que seja a visão de perda)
         const filteredLeads = leads.filter(l => l.status === status && l.resultado !== 'Perda' && !l.excluido);
         if (countEl) countEl.innerText = filteredLeads.length;
 
@@ -136,51 +192,49 @@ function renderCRM() {
             card.id = `lead-${lead.id}`;
             card.ondragstart = (e) => {
                 e.dataTransfer.setData("text", lead.id);
-                card.style.opacity = '0.5';
+                setTimeout(() => card.style.display = 'none', 0);
             };
-            card.ondragend = () => card.style.opacity = '1';
-            card.onclick = (e) => {
-                e.stopPropagation();
-                editLead(lead.id);
-            };
+            card.ondragend = () => card.style.display = 'block';
+            card.onclick = () => editLead(lead.id);
             
             card.innerHTML = `
                 <div class="card-title">${lead.cliente}</div>
                 ${lead.empresa ? `<div class="card-company">${lead.empresa}</div>` : ''}
                 <div class="card-meta">
-                    <span class="tag price">R$ ${parseFloat(lead.valor || 0).toFixed(2)}</span>
+                    <span class="tag price">R$ ${parseFloat(lead.valor || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}</span>
                     ${lead.entrega ? `<span class="tag date">${new Date(lead.entrega + 'T00:00:00').toLocaleDateString('pt-BR')}</span>` : ''}
                 </div>
             `;
             column.appendChild(card);
 
-            // Table Row
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><strong>${lead.cliente}</strong></td>
-                <td>${lead.empresa || '-'}</td>
-                <td><span class="tag">${lead.status}</span></td>
-                <td>R$ ${parseFloat(lead.valor || 0).toFixed(2)}</td>
-                <td>${lead.entrega ? new Date(lead.entrega + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
-                <td>${lead.tipo}</td>
-                <td><button class="btn-modern" onclick="editLead('${lead.id}')"><i class="fa-solid fa-pen"></i></button></td>
-            `;
-            tableBody.appendChild(row);
+            // Adiciona na tabela também
+            if (tableBody) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${lead.cliente}</td>
+                    <td>${lead.empresa || '-'}</td>
+                    <td><span class="tag price">${lead.status}</span></td>
+                    <td>R$ ${parseFloat(lead.valor || 0).toFixed(2)}</td>
+                    <td>${lead.entrega ? new Date(lead.entrega + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+                    <td><button class="btn-modern" onclick="editLead('${lead.id}')"><i class="fa-solid fa-pen"></i></button></td>
+                `;
+                tableBody.appendChild(row);
+            }
         });
     });
     localStorage.setItem('santo_leads', JSON.stringify(leads));
-    updateDashboard();
 }
 
-function allowDrop(ev) { ev.preventDefault(); }
-function drop(ev, status) {
-    ev.preventDefault();
-    const id = ev.dataTransfer.getData("text");
+function allowDrop(e) { e.preventDefault(); }
+function drop(e, newStatus) {
+    e.preventDefault();
+    const id = e.dataTransfer.getData("text");
     const lead = leads.find(l => l.id == id);
     if (lead) {
-        lead.status = status;
+        lead.status = newStatus;
         renderCRM();
         renderFinance();
+        updateDashboard();
     }
 }
 
@@ -191,14 +245,75 @@ function openLeadModal() {
     document.getElementById('m_empresa').value = "";
     document.getElementById('m_status').value = "Proposta Enviada";
     document.getElementById('m_origem').value = "WhatsApp";
-    document.getElementById('m_tipo').value = "Produto";
     document.getElementById('m_entrega').value = "";
     document.getElementById('m_valor').value = "";
     document.getElementById('m_lucro').value = "";
     document.getElementById('m_resultado').value = "";
+    document.getElementById('btn-delete-lead').style.display = 'none';
     updateResultButtons("");
     document.getElementById('modal-overlay').style.display = 'flex';
     document.getElementById('lead-modal').style.display = 'block';
+}
+
+function editLead(id) {
+    const lead = leads.find(l => l.id == id);
+    if (!lead) return;
+    
+    document.getElementById('lead-modal-title').innerText = "EDITAR CLIENTE";
+    document.getElementById('m_lead_id').value = lead.id;
+    document.getElementById('m_cliente').value = lead.cliente;
+    document.getElementById('m_empresa').value = lead.empresa || "";
+    document.getElementById('m_status').value = lead.status;
+    document.getElementById('m_origem').value = lead.origem;
+    document.getElementById('m_entrega').value = lead.entrega || "";
+    document.getElementById('m_valor').value = lead.valor || "";
+    document.getElementById('m_lucro').value = lead.lucro || "";
+    document.getElementById('m_resultado').value = lead.resultado || "";
+    document.getElementById('btn-delete-lead').style.display = 'flex';
+    updateResultButtons(lead.resultado || "");
+    
+    document.getElementById('modal-overlay').style.display = 'flex';
+    document.getElementById('lead-modal').style.display = 'block';
+}
+
+function saveLead() {
+    const id = document.getElementById('m_lead_id').value;
+    const leadData = {
+        id: id || Date.now().toString(),
+        cliente: document.getElementById('m_cliente').value,
+        empresa: document.getElementById('m_empresa').value,
+        status: document.getElementById('m_status').value,
+        origem: document.getElementById('m_origem').value,
+        entrega: document.getElementById('m_entrega').value,
+        valor: document.getElementById('m_valor').value,
+        lucro: document.getElementById('m_lucro').value,
+        resultado: document.getElementById('m_resultado').value
+    };
+
+    if (!leadData.cliente) { alert("Nome do cliente é obrigatório!"); return; }
+
+    if (id) {
+        const index = leads.findIndex(l => l.id == id);
+        leads[index] = leadData;
+    } else {
+        leads.push(leadData);
+    }
+
+    renderCRM();
+    renderFinance();
+    updateDashboard();
+    closeLeadModal();
+}
+
+function deleteLead() {
+    const id = document.getElementById('m_lead_id').value;
+    if (!id) return;
+    if (confirm("Deseja realmente excluir este lead?")) {
+        leads = leads.filter(l => l.id != id);
+        renderCRM();
+        updateDashboard();
+        closeLeadModal();
+    }
 }
 
 function setResult(res) {
@@ -217,67 +332,7 @@ function updateResultButtons(val) {
     if (val === 'Perda') btnPerda.classList.add('active-perda');
 }
 
-function deleteLead() {
-    const id = document.getElementById('m_lead_id').value;
-    if (!id) return;
-    if (confirm("Deseja realmente excluir este lead?")) {
-        leads = leads.filter(l => l.id != id);
-        renderCRM();
-        closeLeadModal();
-    }
-}
-
-function editLead(id) {
-    const lead = leads.find(l => l.id == id);
-    if (!lead) return;
-    
-    document.getElementById('lead-modal-title').innerText = "EDITAR CLIENTE";
-    document.getElementById('m_lead_id').value = lead.id;
-    document.getElementById('m_cliente').value = lead.cliente;
-    document.getElementById('m_empresa').value = lead.empresa || "";
-    document.getElementById('m_status').value = lead.status;
-    document.getElementById('m_origem').value = lead.origem;
-    document.getElementById('m_tipo').value = lead.tipo;
-    document.getElementById('m_entrega').value = lead.entrega || "";
-    document.getElementById('m_valor').value = lead.valor || "";
-    document.getElementById('m_lucro').value = lead.lucro || "";
-    document.getElementById('m_resultado').value = lead.resultado || "";
-    updateResultButtons(lead.resultado || "");
-    
-    document.getElementById('modal-overlay').style.display = 'flex';
-    document.getElementById('lead-modal').style.display = 'block';
-}
-
-function saveLead() {
-    const id = document.getElementById('m_lead_id').value;
-    const leadData = {
-        id: id || Date.now().toString(),
-        cliente: document.getElementById('m_cliente').value,
-        empresa: document.getElementById('m_empresa').value,
-        status: document.getElementById('m_status').value,
-        origem: document.getElementById('m_origem').value,
-        tipo: document.getElementById('m_tipo').value,
-        entrega: document.getElementById('m_entrega').value,
-        valor: document.getElementById('m_valor').value,
-        lucro: document.getElementById('m_lucro').value,
-        resultado: document.getElementById('m_resultado').value
-    };
-
-    if (!leadData.cliente) { alert("Nome do cliente é obrigatório!"); return; }
-
-    if (id) {
-        const index = leads.findIndex(l => l.id == id);
-        leads[index] = leadData;
-    } else {
-        leads.push(leadData);
-    }
-
-    renderCRM();
-    renderFinance();
-    closeLeadModal();
-}
-
-function closeLeadModal() { 
+function closeLeadModal() {
     document.getElementById('modal-overlay').style.display = 'none';
     document.getElementById('lead-modal').style.display = 'none';
 }
@@ -295,121 +350,224 @@ function toggleCRMView() {
 }
 
 // ================================================================================= //
+//                                   CALCULADORA                                     //
+// ================================================================================= //
+
+function addItem() {
+    const id = Date.now();
+    items.push({ id, nome: "", qtd: 1, setup: 0, grav: 0, arte: 0, mat: 0 });
+    renderItems();
+}
+
+function renderItems() {
+    const list = document.getElementById('items-list');
+    list.innerHTML = "";
+    items.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'item-block';
+        div.innerHTML = `
+            <div class="item-header">
+                <strong>Item #${idx + 1}</strong>
+                <span class="remove-item" onclick="removeItem(${item.id})">REMOVER</span>
+            </div>
+            <div class="field-group">
+                <label>Descrição do Item</label>
+                <input type="text" value="${item.nome}" oninput="updateItem(${item.id}, 'nome', this.value)" placeholder="Ex: Luminária de Acrílico">
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Quantidade</label><input type="number" value="${item.qtd}" oninput="updateItem(${item.id}, 'qtd', this.value)"></div>
+                <div class="field-group"><label>Custo Material (R$)</label><input type="number" value="${item.mat}" oninput="updateItem(${item.id}, 'mat', this.value)"></div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Tempo Arte (min)</label><input type="number" value="${item.arte}" oninput="updateItem(${item.id}, 'arte', this.value)"></div>
+                <div class="field-group"><label>Tempo Setup (min)</label><input type="number" value="${item.setup}" oninput="updateItem(${item.id}, 'setup', this.value)"></div>
+                <div class="field-group"><label>Corte/Grav (min)</label><input type="number" value="${item.grav}" oninput="updateItem(${item.id}, 'grav', this.value)"></div>
+            </div>
+        `;
+        list.appendChild(div);
+    });
+    calc();
+}
+
+function updateItem(id, field, val) {
+    const item = items.find(i => i.id === id);
+    if (item) {
+        item[field] = field === 'nome' ? val : parseFloat(val) || 0;
+        calc();
+    }
+}
+
+function removeItem(id) {
+    items = items.filter(i => i.id !== id);
+    renderItems();
+}
+
+function calc() {
+    const valorHora = parseFloat(document.getElementById('g_valor_hora').value) || 0;
+    const impostoPorc = (parseFloat(document.getElementById('g_imposto').value) || 0) / 100;
+    const taxaCartao = (parseFloat(document.getElementById('g_cartao').value) || 0) / 100;
+    const freteInsumos = parseFloat(document.getElementById('g_frete').value) || 0;
+    const freteCliente = parseFloat(document.getElementById('g_frete_cliente').value) || 0;
+    const descontoPorc = (parseFloat(document.getElementById('g_desconto').value) || 0) / 100;
+
+    const valorMinuto = valorHora / 60;
+    let totalBruto = 0;
+    let lucroTotal = 0;
+    
+    const cardBody = document.getElementById('card-body');
+    cardBody.innerHTML = "";
+
+    items.forEach(item => {
+        const tempoTotal = item.arte + item.setup + item.grav;
+        const custoTempo = tempoTotal * valorMinuto;
+        const custoTotalItem = (custoTempo + item.mat) * item.qtd;
+        
+        // Simplificação: Preço de venda = Custo * 2 (Margem 100% sobre custo) + impostos
+        const precoVendaBase = custoTotalItem * 2;
+        totalBruto += precoVendaBase;
+        lucroTotal += (precoVendaBase - custoTotalItem);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${item.qtd}x</td><td>${item.nome || 'Item sem nome'}</td><td>R$ ${precoVendaBase.toFixed(2)}</td>`;
+        cardBody.appendChild(row);
+    });
+
+    let totalFinal = (totalBruto + freteCliente) * (1 - descontoPorc);
+    totalFinal = totalFinal / (1 - impostoPorc - taxaCartao);
+
+    document.getElementById('card_total').innerText = `R$ ${totalFinal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    document.getElementById('display_nome_cliente').innerText = document.getElementById('g_cliente').value || "Não informado";
+    const dataProp = document.getElementById('g_data_proposta').value;
+    document.getElementById('display_data_proposta').innerText = dataProp ? new Date(dataProp + 'T00:00:00').toLocaleDateString('pt-BR') : "";
+
+    // Armazena lucro para o CRM
+    window.lastCalcLucro = lucroTotal;
+    window.lastCalcTotal = totalFinal;
+}
+
+function sendToCRM() {
+    const nome = document.getElementById('g_cliente').value;
+    if (!nome) { alert("Informe o nome do cliente na calculadora!"); return; }
+    
+    const newLead = {
+        id: Date.now().toString(),
+        cliente: nome,
+        empresa: "",
+        status: "Proposta Enviada",
+        origem: "WhatsApp",
+        entrega: document.getElementById('g_data_proposta').value,
+        valor: window.lastCalcTotal || 0,
+        lucro: window.lastCalcLucro || 0,
+        resultado: ""
+    };
+    leads.push(newLead);
+    renderCRM();
+    alert("Orçamento salvo no CRM com sucesso!");
+    showSection('crm');
+}
+
+function copyWA() {
+    const total = document.getElementById('card_total').innerText;
+    const cliente = document.getElementById('g_cliente').value;
+    let msg = `Olá ${cliente}! Segue o orçamento da Santo Laser:\n\n`;
+    items.forEach(i => msg += `- ${i.qtd}x ${i.nome}\n`);
+    msg += `\n*Valor Total: ${total}*\n\nAguardamos seu retorno!`;
+    navigator.clipboard.writeText(msg).then(() => alert("Texto copiado para o WhatsApp!"));
+}
+
+// ================================================================================= //
 //                                 FLUXO DE CAIXA                                    //
 // ================================================================================= //
 
-function openFinanceModal(tipo) {
-    document.getElementById('f_tipo').value = tipo;
-    document.getElementById('finance-modal-title').innerText = tipo === 'entrada' ? 'ADICIONAR ENTRADA' : 'ADICIONAR SAÍDA';
-    document.getElementById('f_desc').value = "";
-    document.getElementById('f_valor').value = "";
-    document.getElementById('f_data').valueAsDate = new Date();
-    document.getElementById('modal-overlay').style.display = 'flex';
-    document.getElementById('finance-modal').style.display = 'block';
-}
-
-function closeFinanceModal() {
-    document.getElementById('modal-overlay').style.display = 'none';
-    document.getElementById('finance-modal').style.display = 'none';
-}
-
-function saveTransaction() {
-    const t = {
-        id: Date.now().toString(),
-        desc: document.getElementById('f_desc').value,
-        valor: parseFloat(document.getElementById('f_valor').value) || 0,
-        data: document.getElementById('f_data').value,
-        metodo: document.getElementById('f_metodo').value,
-        tipo: document.getElementById('f_tipo').value
-    };
-    if (!t.desc || !t.valor) return;
-    transactions.push(t);
-    localStorage.setItem('santo_transactions', JSON.stringify(transactions));
-    renderFinance();
-    closeFinanceModal();
-}
-
 function renderFinance() {
-    const tableBody = document.getElementById('finance-table-body');
-    tableBody.innerHTML = "";
-    
-    let inflow = 0;
-    let outflow = 0;
+    const body = document.getElementById('finance-table-body');
+    if (!body) return;
+    body.innerHTML = "";
 
     const start = document.getElementById('filter-start').value;
     const end = document.getElementById('filter-end').value;
 
-    // Unifica transações manuais e vendas do CRM
-    const allTrans = [
-        ...transactions.map(t => ({...t, source: 'manual'})),
-        ...leads.filter(l => l.status === 'Pago').map(l => ({
-            id: l.id,
-            data: l.entrega,
-            desc: `VENDA: ${l.cliente}`,
-            tipo: 'entrada',
-            metodo: 'CRM',
-            valor: parseFloat(l.valor || 0),
-            source: 'crm'
-        }))
-    ];
+    // Adiciona transações automáticas de leads pagos
+    const autoTransactions = leads.filter(l => l.status === 'Pago' && l.resultado !== 'Perda').map(l => ({
+        id: `auto-${l.id}`,
+        data: l.entrega || new Date().toISOString().split('T')[0],
+        desc: `VENDA: ${l.cliente}`,
+        tipo: 'Entrada',
+        cat: 'Vendas CRM',
+        valor: parseFloat(l.valor)
+    }));
 
-    allTrans.sort((a, b) => new Date(b.data) - new Date(a.data));
+    const allTransactions = [...transactions, ...autoTransactions].sort((a, b) => new Date(b.data) - new Date(a.data));
 
-    allTrans.forEach(t => {
+    let entradas = 0;
+    let saidas = 0;
+
+    allTransactions.forEach(t => {
         if (start && t.data < start) return;
         if (end && t.data > end) return;
 
-        if (t.tipo === 'entrada') inflow += t.valor;
-        else outflow += t.valor;
+        if (t.tipo === 'Entrada') entradas += t.valor;
+        else saidas += t.valor;
 
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${new Date(t.data + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
-            <td><strong>${t.desc}</strong></td>
-            <td><span class="tag">${t.source === 'crm' ? 'VENDA' : (t.tipo === 'entrada' ? 'ENTRADA' : 'SAÍDA')}</span></td>
-            <td>${t.metodo}</td>
-            <td class="${t.tipo === 'entrada' ? 'success' : 'danger'}" style="color: ${t.tipo === 'entrada' ? 'var(--success)' : 'var(--danger)'}">
-                ${t.tipo === 'entrada' ? '+' : '-'} R$ ${t.valor.toFixed(2)}
-            </td>
-            <td>
-                ${t.source === 'manual' ? `<button class="btn-modern" onclick="removeTransaction('${t.id}')"><i class="fa-solid fa-trash"></i></button>` : '-'}
-            </td>
+            <td>${t.desc}</td>
+            <td><span class="tag ${t.tipo === 'Entrada' ? 'price' : 'date'}" style="color:${t.tipo === 'Entrada' ? 'var(--success)' : 'var(--danger)'}">${t.tipo.toUpperCase()}</span></td>
+            <td>${t.cat}</td>
+            <td>R$ ${t.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
+            <td>${t.id.toString().startsWith('auto') ? '' : `<button class="btn-modern btn-danger" onclick="deleteTransaction(${t.id})"><i class="fa-solid fa-trash"></i></button>`}</td>
         `;
-        tableBody.appendChild(row);
+        body.appendChild(row);
     });
 
-    const balance = initialBalance + inflow - outflow;
-    document.getElementById('cash-inflow').innerText = `R$ ${inflow.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('cash-outflow').innerText = `R$ ${outflow.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('cash-balance').innerText = `R$ ${balance.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('cash-result').innerText = `R$ ${(inflow - outflow).toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-}
-
-function removeTransaction(id) {
-    transactions = transactions.filter(t => t.id !== id);
+    document.getElementById('fin-entradas').innerText = `R$ ${entradas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    document.getElementById('fin-saidas').innerText = `R$ ${saidas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    document.getElementById('fin-saldo').innerText = `R$ ${(initialBalance + entradas - saidas).toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    
     localStorage.setItem('santo_transactions', JSON.stringify(transactions));
-    renderFinance();
 }
 
-function openBalanceModal() {
-    document.getElementById('initial-balance-input').value = initialBalance;
+function openFinanceModal(tipo) {
+    document.getElementById('f_tipo').value = tipo;
+    document.getElementById('fin-modal-title').innerText = `NOVA ${tipo.toUpperCase()}`;
+    document.getElementById('f_desc').value = "";
+    document.getElementById('f_valor').value = "";
+    document.getElementById('f_cat').value = "";
+    document.getElementById('f_data').value = new Date().toISOString().split('T')[0];
     document.getElementById('modal-overlay').style.display = 'flex';
-    document.getElementById('balance-modal').style.display = 'block';
+    document.getElementById('finance-modal').style.display = 'block';
 }
 
-function closeBalanceModal() {
-    document.getElementById('modal-overlay').style.display = 'none';
-    document.getElementById('balance-modal').style.display = 'none';
-}
-
-function saveInitialBalance() {
-    initialBalance = parseFloat(document.getElementById('initial-balance-input').value) || 0;
-    localStorage.setItem('santo_initial_balance', initialBalance);
+function saveTransaction() {
+    const t = {
+        id: Date.now(),
+        desc: document.getElementById('f_desc').value,
+        valor: parseFloat(document.getElementById('f_valor').value) || 0,
+        cat: document.getElementById('f_cat').value,
+        data: document.getElementById('f_data').value,
+        tipo: document.getElementById('f_tipo').value
+    };
+    if (!t.desc || !t.valor) return;
+    transactions.push(t);
     renderFinance();
-    closeBalanceModal();
+    closeAllModals();
 }
 
-function applyFinanceFilters() { renderFinance(); }
+function deleteTransaction(id) {
+    transactions = transactions.filter(t => t.id !== id);
+    renderFinance();
+}
+
+function openInitialBalanceModal() {
+    const val = prompt("Informe o saldo inicial em conta:", initialBalance);
+    if (val !== null) {
+        initialBalance = parseFloat(val) || 0;
+        localStorage.setItem('santo_initial_balance', initialBalance);
+        renderFinance();
+    }
+}
+
 function clearFinanceFilters() {
     document.getElementById('filter-start').value = "";
     document.getElementById('filter-end').value = "";
@@ -437,10 +595,10 @@ function runSimulator() {
         
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td><input type="text" class="field-group input" style="width:100%" value="${item.nome}" onchange="updateSimItem(${item.id}, 'nome', this.value)"></td>
-            <td><input type="number" class="field-group input" value="${item.preco}" onchange="updateSimItem(${item.id}, 'preco', this.value)"></td>
-            <td><input type="number" class="field-group input" value="${item.margem}" onchange="updateSimItem(${item.id}, 'margem', this.value)">%</td>
-            <td><input type="number" class="field-group input" value="${item.atual}" onchange="updateSimItem(${item.id}, 'atual', this.value)"></td>
+            <td><input type="text" value="${item.nome}" onchange="updateSimItem(${item.id}, 'nome', this.value)" placeholder="Nome do Produto"></td>
+            <td><input type="number" value="${item.preco}" onchange="updateSimItem(${item.id}, 'preco', this.value)"></td>
+            <td><input type="number" value="${item.margem}" onchange="updateSimItem(${item.id}, 'margem', this.value)">%</td>
+            <td><input type="number" value="${item.atual}" onchange="updateSimItem(${item.id}, 'atual', this.value)"></td>
             <td><strong>${vendasNecessarias}</strong></td>
             <td><button class="btn-modern btn-danger" onclick="removeSimItem(${item.id})"><i class="fa-solid fa-trash"></i></button></td>
         `;
@@ -452,6 +610,14 @@ function runSimulator() {
 function addSimItem() {
     simItems.push({ id: Date.now(), nome: "", preco: 0, margem: 0, atual: 0 });
     runSimulator();
+}
+
+function updateSimItem(id, field, val) {
+    const item = simItems.find(i => i.id === id);
+    if (item) {
+        item[field] = field === 'nome' ? val : parseFloat(val) || 0;
+        runSimulator();
+    }
 }
 
 function removeSimItem(id) {
@@ -529,12 +695,7 @@ function saveStockItem() {
         stockItems.push(item);
     }
     renderStock();
-    closeStockModal();
-}
-
-function closeStockModal() {
-    document.getElementById('modal-overlay').style.display = 'none';
-    document.getElementById('stock-modal').style.display = 'none';
+    closeAllModals();
 }
 
 function removeStockItem(id) {
@@ -544,133 +705,6 @@ function removeStockItem(id) {
     }
 }
 
-function updateSimItem(id, field, value) {
-    const item = simItems.find(i => i.id == id);
-    if (item) {
-        item[field] = field === 'nome' ? value : parseFloat(value);
-        runSimulator();
-    }
-}
-
-// ================================================================================= //
-//                                  CALCULADORA                                      //
-// ================================================================================= //
-
-function addItem() {
-    const id = Date.now();
-    items.push({ id, qtd: 1, nome: "", mat_preco: 0, mat_rend: 1, arte: 0, setup: 0, grav: 0, marg: 50 });
-    renderItems();
-}
-
-function renderItems() {
-    const list = document.getElementById('items-list');
-    list.innerHTML = items.map(i => `
-        <div class="item-card sidebar" style="width:100%; box-shadow:none; border:1px solid var(--border-color); margin-bottom:15px; background:transparent;">
-            <div class="field-grid">
-                <div class="field"><label>Qtd</label><input type="number" value="${i.qtd}" oninput="updateItem(${i.id}, 'qtd', this.value)"></div>
-                <div class="field"><label>Nome do Item</label><input type="text" value="${i.nome}" placeholder="Ex: Chaveiro" oninput="updateItem(${i.id}, 'nome', this.value)"></div>
-            </div>
-            <div class="field-grid">
-                <div class="field"><label>Mat. Preço (R$)</label><input type="number" value="${i.mat_preco}" oninput="updateItem(${i.id}, 'mat_preco', this.value)"></div>
-                <div class="field"><label>Rendimento</label><input type="number" value="${i.mat_rend}" oninput="updateItem(${i.id}, 'mat_rend', this.value)"></div>
-            </div>
-            <div class="field-grid">
-                <div class="field"><label>Arte (m)</label><input type="number" value="${i.arte}" oninput="updateItem(${i.id}, 'arte', this.value)"></div>
-                <div class="field"><label>Setup (m)</label><input type="number" value="${i.setup}" oninput="updateItem(${i.id}, 'setup', this.value)"></div>
-                <div class="field"><label>Gravação (m)</label><input type="number" value="${i.grav}" oninput="updateItem(${i.id}, 'grav', this.value)"></div>
-            </div>
-            <div class="field-grid">
-                <div class="field"><label>Margem (%)</label><input type="number" value="${i.marg}" oninput="updateItem(${i.id}, 'marg', this.value)"></div>
-                <button class="btn-modern btn-danger" onclick="removeItem(${i.id})" style="margin-top:25px"><i class="fa-solid fa-trash"></i></button>
-            </div>
-        </div>
-    `).join('');
-    calc();
-}
-
-function updateItem(id, field, value) {
-    const item = items.find(i => i.id == id);
-    if (item) {
-        item[field] = field === 'nome' ? value : parseFloat(value);
-        calc();
-    }
-}
-
-function removeItem(id) {
-    items = items.filter(i => i.id !== id);
-    renderItems();
-}
-
-function calc() {
-    const valorHora = parseFloat(document.getElementById('g_valor_hora').value) || 0;
-    const impGlobal = (parseFloat(document.getElementById('g_imposto').value) || 0) / 100;
-    const taxaAM = (parseFloat(document.getElementById('g_cartao').value) || 0) / 100;
-    const freteInsumos = parseFloat(document.getElementById('g_frete').value) || 0;
-    const freteCliente = parseFloat(document.getElementById('g_frete_cliente').value) || 0;
-    const descontoPorc = (parseFloat(document.getElementById('g_desconto').value) || 0) / 100;
-    
-    const valorMinuto = valorHora / 60;
-    let totalVendaGeral = 0;
-    let totalCustoGeral = 0;
-    let totalTempoGeral = 0;
-
-    items.forEach(i => {
-        const custoMat = (i.mat_preco / i.mat_rend) + (freteInsumos / (items.length * i.qtd || 1));
-        const tempoItem = i.arte + i.setup + (i.grav * i.qtd);
-        const custoTempo = tempoItem * valorMinuto;
-        const custoUnit = (custoMat + (custoTempo / i.qtd));
-        const precoUnit = custoUnit / (1 - (i.marg / 100));
-        
-        totalVendaGeral += (precoUnit * i.qtd);
-        totalCustoGeral += (custoUnit * i.qtd);
-        totalTempoGeral += tempoItem;
-    });
-
-    const totalFinal = (totalVendaGeral * (1 - descontoPorc) + freteCliente) / (1 - impGlobal - taxaAM);
-    const lucroReal = totalFinal - totalCustoGeral - (totalFinal * impGlobal) - (totalFinal * taxaAM) - freteCliente;
-
-    document.getElementById('card_total').innerText = `R$ ${totalFinal.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('out_tempo_total').innerText = `${Math.floor(totalTempoGeral / 60)}h ${Math.round(totalTempoGeral % 60)}m`;
-    document.getElementById('out_custo_total').innerText = `R$ ${totalCustoGeral.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('out_lucro_total').innerText = `R$ ${lucroReal.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-
-    // Update Preview
-    document.getElementById('display_nome_cliente').innerText = document.getElementById('g_cliente').value || "Não informado";
-    const dataProp = document.getElementById('g_data_proposta').value;
-    document.getElementById('display_data_proposta').innerText = dataProp ? new Date(dataProp + 'T00:00:00').toLocaleDateString('pt-BR') : "";
-
-    const cardBody = document.getElementById('card-body');
-    cardBody.innerHTML = items.map(i => `
-        <tr>
-            <td>${i.qtd}x</td>
-            <td>${i.nome || 'Item sem nome'}</td>
-            <td>R$ ${(i.qtd * (totalFinal/totalVendaGeral || 1) * (i.mat_preco/i.mat_rend + (i.arte+i.setup+i.grav*i.qtd)*valorMinuto/i.qtd) / (1-i.marg/100)).toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
-        </tr>
-    `).join('');
-
-    window.currentCalculation = { total: totalFinal, lucro: lucroReal };
-}
-
-function sendToCRM() {
-    const cliente = document.getElementById('g_cliente').value;
-    if (!cliente) { alert("Preencha o nome do cliente!"); return; }
-    
-    openLeadModal();
-    document.getElementById('m_cliente').value = cliente;
-    document.getElementById('m_valor').value = window.currentCalculation.total.toFixed(2);
-    document.getElementById('m_lucro').value = window.currentCalculation.lucro.toFixed(2);
-    document.getElementById('m_entrega').value = document.getElementById('g_data_proposta').value;
-}
-
-function copyWA() {
-    const texto = `Olá ${document.getElementById('g_cliente').value}! Segue o orçamento da Santo Laser: Total R$ ${document.getElementById('card_total').innerText}`;
-    navigator.clipboard.writeText(texto).then(() => alert("Copiado!"));
-}
-
-function closeAllModals(e) {
-    if (e.target.classList.contains('modal-overlay')) {
-        closeLeadModal();
-        closeFinanceModal();
-        closeBalanceModal();
-    }
+function closeStockModal() {
+    closeAllModals();
 }
