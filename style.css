@@ -274,10 +274,52 @@ header h2 { font-family: var(--font-accent); font-size: 1.5rem; margin: 0; color
 .filter-group { display: flex; align-items: center; gap: 15px; font-size: 0.85rem; }
 .filter-group input { background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 5px 10px; border-radius: 6px; }
 
-/* Calculadora Layout */
-.calc-layout { display: grid; grid-template-columns: 350px 1fr; gap: 30px; }
-.calc-inputs { background: var(--bg-panel); border-radius: 16px; border: 1px solid var(--border-color); padding: 25px; height: fit-content; }
-.preview-area { display: flex; flex-direction: column; gap: 20px; }
+/* Calculadora Layout Corrigido */
+.calc-container-fixed {
+    display: flex;
+    gap: 30px;
+    height: calc(100vh - 150px);
+}
+
+.calc-inputs-scroll {
+    width: 400px;
+    background: var(--bg-panel);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    padding: 25px;
+    overflow-y: auto;
+    height: 100%;
+}
+
+.preview-area {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-right: 10px;
+}
+
+.quote-card {
+    background: white;
+    color: black;
+    padding: 40px;
+    border-radius: 4px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    width: 100%;
+    min-height: 800px;
+}
+
+[data-theme="light"] .quote-card {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.item-card.sidebar {
+    background: var(--bg-input) !important;
+    border: 1px solid var(--border-color) !important;
+    padding: 15px !important;
+    margin-bottom: 15px !important;
+}
 
 .section-header { font-family: var(--font-accent); font-size: 0.7rem; color: var(--neon); margin: 25px 0 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
 
@@ -305,4 +347,23 @@ header h2 { font-family: var(--font-accent); font-size: 1.5rem; margin: 0; color
     .logo-container h1, .nav-item span, .btn-theme span { display: none; }
     .main-content { margin-left: 80px; }
     .calc-layout, .simulator-layout { grid-template-columns: 1fr; }
+}
+
+/* CRM Result Buttons */
+.btn-group-modern { display: flex; gap: 10px; margin-top: 5px; }
+.btn-group-modern .btn-modern { flex: 1; justify-content: center; }
+.btn-group-modern .btn-modern.active-venda { background: var(--success); color: white; border: none; box-shadow: 0 0 10px rgba(0,200,83,0.3); }
+.btn-group-modern .btn-modern.active-perda { background: var(--danger); color: white; border: none; box-shadow: 0 0 10px rgba(255,23,68,0.3); }
+
+/* Charts Placeholder */
+.placeholder-chart {
+    height: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+}
+
+.chart-container canvas {
+    max-height: 250px;
 }

@@ -5,10 +5,8 @@
 
 let leads = JSON.parse(localStorage.getItem('santo_leads')) || [];
 let transactions = JSON.parse(localStorage.getItem('santo_transactions')) || [];
-let simItems = JSON.parse(localStorage.getItem('santo_sim_items')) || [
-    { id: 1, nome: "Produto A", preco: 100, margem: 50, atual: 0 },
-    { id: 2, nome: "Serviço B", preco: 50, margem: 90, atual: 0 }
-];
+let simItems = JSON.parse(localStorage.getItem('santo_sim_items')) || [];
+let stockItems = JSON.parse(localStorage.getItem('santo_stock_items')) || [];
 let initialBalance = parseFloat(localStorage.getItem('santo_initial_balance')) || 0;
 let items = []; // Itens da calculadora atual
 
@@ -21,8 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCRM();
     renderFinance();
     runSimulator();
+    renderStock();
     updateDashboard();
-    addItem(); // Inicia calculadora com um item
+    addItem(); 
 });
 
 function updateCurrentDate() {
@@ -57,24 +56,53 @@ function updateDashboard() {
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    // Filtra leads pagos no mês atual
+    // Filtra leads pagos (Venda) no mês atual
     const paidLeadsMonth = leads.filter(l => {
-        if (l.status !== 'Pago' || !l.entrega) return false;
+        if (l.status !== 'Pago' || !l.entrega || l.resultado === 'Perda') return false;
         const d = new Date(l.entrega + 'T00:00:00');
         return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
 
     const faturamento = paidLeadsMonth.reduce((acc, l) => acc + parseFloat(l.valor || 0), 0);
     const lucro = paidLeadsMonth.reduce((acc, l) => acc + parseFloat(l.lucro || 0), 0);
-    const pedidosAtivos = leads.filter(l => l.status !== 'Pago' && l.status !== 'Cancelado').length;
     
-    const totalLeads = leads.length;
-    const conversao = totalLeads > 0 ? (leads.filter(l => l.status === 'Pago').length / totalLeads * 100).toFixed(1) : 0;
+    // Pedidos Ativos: Aprovado ou Produção
+    const pedidosAtivos = leads.filter(l => l.status === 'Aprovado' || l.status === 'Produção').length;
+    
+    const totalFinalizados = leads.filter(l => l.status === 'Pago' || l.resultado === 'Perda').length;
+    const totalVendas = leads.filter(l => l.status === 'Pago' && l.resultado !== 'Perda').length;
+    const conversao = totalFinalizados > 0 ? (totalVendas / totalFinalizados * 100).toFixed(1) : 0;
 
     document.getElementById('dash-faturamento').innerText = `R$ ${faturamento.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
     document.getElementById('dash-lucro').innerText = `R$ ${lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
     document.getElementById('dash-pedidos').innerText = pedidosAtivos;
     document.getElementById('dash-conversao').innerText = `${conversao}%`;
+    
+    renderCharts();
+}
+
+function renderCharts() {
+    const ctxOrigem = document.getElementById('chart-origem');
+    if (!ctxOrigem) return;
+    
+    // Simples placeholder para gráfico real se Chart.js estiver carregado
+    if (window.Chart) {
+        if (window.myChartOrigem) window.myChartOrigem.destroy();
+        const origens = {};
+        leads.forEach(l => origens[l.origem] = (origens[l.origem] || 0) + 1);
+        
+        window.myChartOrigem = new Chart(ctxOrigem, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(origens),
+                datasets: [{
+                    data: Object.values(origens),
+                    backgroundColor: ['#00e6cb', '#ff1744', '#ffea00', '#00c853', '#2979ff']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
 }
 
 // ================================================================================= //
@@ -84,26 +112,37 @@ function updateDashboard() {
 function renderCRM() {
     const statuses = ["Proposta Enviada", "Aprovado", "Produção", "Finalizado", "Pago"];
     const tableBody = document.getElementById('crm-table-body');
-    tableBody.innerHTML = "";
+    if (tableBody) tableBody.innerHTML = "";
 
     statuses.forEach(status => {
-        const column = document.getElementById(`cards-${status.toLowerCase().replace(/ /g, '-').normalize("NFD").replace(/[\u0300-\u036f]/g, "")}`);
-        const countEl = document.getElementById(`count-${status.toLowerCase().replace(/ /g, '-').normalize("NFD").replace(/[\u0300-\u036f]/g, "")}`);
+        // Correção do ID da coluna (removendo acentos e espaços)
+        const columnId = `cards-${status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-')}`;
+        const countId = `count-${status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-')}`;
+        
+        const column = document.getElementById(columnId);
+        const countEl = document.getElementById(countId);
         
         if (!column) return;
         column.innerHTML = "";
         
-        const filteredLeads = leads.filter(l => l.status === status);
-        countEl.innerText = filteredLeads.length;
+        // Filtra leads ativos (não excluídos e não perda, a menos que seja a visão de perda)
+        const filteredLeads = leads.filter(l => l.status === status && l.resultado !== 'Perda' && !l.excluido);
+        if (countEl) countEl.innerText = filteredLeads.length;
 
         filteredLeads.forEach(lead => {
-            // Kanban Card
             const card = document.createElement('div');
             card.className = 'kanban-card';
             card.draggable = true;
             card.id = `lead-${lead.id}`;
-            card.ondragstart = (e) => e.dataTransfer.setData("text", lead.id);
-            card.onclick = () => editLead(lead.id);
+            card.ondragstart = (e) => {
+                e.dataTransfer.setData("text", lead.id);
+                card.style.opacity = '0.5';
+            };
+            card.ondragend = () => card.style.opacity = '1';
+            card.onclick = (e) => {
+                e.stopPropagation();
+                editLead(lead.id);
+            };
             
             card.innerHTML = `
                 <div class="card-title">${lead.cliente}</div>
@@ -156,8 +195,36 @@ function openLeadModal() {
     document.getElementById('m_entrega').value = "";
     document.getElementById('m_valor').value = "";
     document.getElementById('m_lucro').value = "";
+    document.getElementById('m_resultado').value = "";
+    updateResultButtons("");
     document.getElementById('modal-overlay').style.display = 'flex';
     document.getElementById('lead-modal').style.display = 'block';
+}
+
+function setResult(res) {
+    const current = document.getElementById('m_resultado').value;
+    const newVal = current === res ? "" : res;
+    document.getElementById('m_resultado').value = newVal;
+    updateResultButtons(newVal);
+}
+
+function updateResultButtons(val) {
+    const btnVenda = document.getElementById('btn-venda');
+    const btnPerda = document.getElementById('btn-perda');
+    btnVenda.classList.remove('active-venda');
+    btnPerda.classList.remove('active-perda');
+    if (val === 'Venda') btnVenda.classList.add('active-venda');
+    if (val === 'Perda') btnPerda.classList.add('active-perda');
+}
+
+function deleteLead() {
+    const id = document.getElementById('m_lead_id').value;
+    if (!id) return;
+    if (confirm("Deseja realmente excluir este lead?")) {
+        leads = leads.filter(l => l.id != id);
+        renderCRM();
+        closeLeadModal();
+    }
 }
 
 function editLead(id) {
@@ -174,6 +241,8 @@ function editLead(id) {
     document.getElementById('m_entrega').value = lead.entrega || "";
     document.getElementById('m_valor').value = lead.valor || "";
     document.getElementById('m_lucro').value = lead.lucro || "";
+    document.getElementById('m_resultado').value = lead.resultado || "";
+    updateResultButtons(lead.resultado || "");
     
     document.getElementById('modal-overlay').style.display = 'flex';
     document.getElementById('lead-modal').style.display = 'block';
@@ -190,7 +259,8 @@ function saveLead() {
         tipo: document.getElementById('m_tipo').value,
         entrega: document.getElementById('m_entrega').value,
         valor: document.getElementById('m_valor').value,
-        lucro: document.getElementById('m_lucro').value
+        lucro: document.getElementById('m_lucro').value,
+        resultado: document.getElementById('m_resultado').value
     };
 
     if (!leadData.cliente) { alert("Nome do cliente é obrigatório!"); return; }
@@ -361,21 +431,18 @@ function runSimulator() {
     const tableBody = document.getElementById('sim-table-body');
     tableBody.innerHTML = "";
 
-    let lucroTotalPrevisto = 0;
-
     simItems.forEach(item => {
         const margemValor = item.preco * (item.margem / 100);
-        const vendasNecessarias = Math.ceil(metaLucro / (margemValor || 1)); // Simplificação: quanto desse item pagaria a meta toda?
-        // Na prática, o usuário distribui as vendas. Vamos mostrar o potencial.
+        const vendasNecessarias = margemValor > 0 ? Math.ceil(metaLucro / margemValor) : 0;
         
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td><input type="text" value="${item.nome}" onchange="updateSimItem(${item.id}, 'nome', this.value)"></td>
-            <td>R$ <input type="number" value="${item.preco}" onchange="updateSimItem(${item.id}, 'preco', this.value)"></td>
-            <td><input type="number" value="${item.margem}" onchange="updateSimItem(${item.id}, 'margem', this.value)">%</td>
-            <td><input type="number" value="${item.atual}" onchange="updateSimItem(${item.id}, 'atual', this.value)"></td>
+            <td><input type="text" class="field-group input" style="width:100%" value="${item.nome}" onchange="updateSimItem(${item.id}, 'nome', this.value)"></td>
+            <td><input type="number" class="field-group input" value="${item.preco}" onchange="updateSimItem(${item.id}, 'preco', this.value)"></td>
+            <td><input type="number" class="field-group input" value="${item.margem}" onchange="updateSimItem(${item.id}, 'margem', this.value)">%</td>
+            <td><input type="number" class="field-group input" value="${item.atual}" onchange="updateSimItem(${item.id}, 'atual', this.value)"></td>
             <td><strong>${vendasNecessarias}</strong></td>
-            <td>R$ ${(item.preco * item.atual).toFixed(2)}</td>
+            <td><button class="btn-modern btn-danger" onclick="removeSimItem(${item.id})"><i class="fa-solid fa-trash"></i></button></td>
         `;
         tableBody.appendChild(row);
     });
@@ -383,8 +450,98 @@ function runSimulator() {
 }
 
 function addSimItem() {
-    simItems.push({ id: Date.now(), nome: "Novo Item", preco: 0, margem: 0, atual: 0 });
+    simItems.push({ id: Date.now(), nome: "", preco: 0, margem: 0, atual: 0 });
     runSimulator();
+}
+
+function removeSimItem(id) {
+    simItems = simItems.filter(i => i.id !== id);
+    runSimulator();
+}
+
+// ================================================================================= //
+//                                     ESTOQUE                                       //
+// ================================================================================= //
+
+function renderStock() {
+    const body = document.getElementById('stock-table-body');
+    if (!body) return;
+    body.innerHTML = "";
+    
+    stockItems.forEach(item => {
+        const row = document.createElement('tr');
+        const lowStock = item.qtd <= item.min;
+        row.innerHTML = `
+            <td><strong>${item.nome}</strong></td>
+            <td>${item.cat}</td>
+            <td style="color: ${lowStock ? 'var(--danger)' : 'inherit'}">${item.qtd} ${lowStock ? '<i class="fa-solid fa-triangle-exclamation"></i>' : ''}</td>
+            <td>${item.min}</td>
+            <td>R$ ${parseFloat(item.valor).toFixed(2)}</td>
+            <td>R$ ${(item.qtd * item.valor).toFixed(2)}</td>
+            <td>
+                <button class="btn-modern" onclick="editStockItem(${item.id})"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-modern btn-danger" onclick="removeStockItem(${item.id})"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        `;
+        body.appendChild(row);
+    });
+    localStorage.setItem('santo_stock_items', JSON.stringify(stockItems));
+}
+
+function openStockModal() {
+    document.getElementById('s_item_id').value = "";
+    document.getElementById('s_nome').value = "";
+    document.getElementById('s_cat').value = "";
+    document.getElementById('s_valor').value = "";
+    document.getElementById('s_qtd').value = "";
+    document.getElementById('s_min').value = "";
+    document.getElementById('modal-overlay').style.display = 'flex';
+    document.getElementById('stock-modal').style.display = 'block';
+}
+
+function editStockItem(id) {
+    const item = stockItems.find(i => i.id == id);
+    if (!item) return;
+    document.getElementById('s_item_id').value = item.id;
+    document.getElementById('s_nome').value = item.nome;
+    document.getElementById('s_cat').value = item.cat;
+    document.getElementById('s_valor').value = item.valor;
+    document.getElementById('s_qtd').value = item.qtd;
+    document.getElementById('s_min').value = item.min;
+    document.getElementById('modal-overlay').style.display = 'flex';
+    document.getElementById('stock-modal').style.display = 'block';
+}
+
+function saveStockItem() {
+    const id = document.getElementById('s_item_id').value;
+    const item = {
+        id: id || Date.now(),
+        nome: document.getElementById('s_nome').value,
+        cat: document.getElementById('s_cat').value,
+        valor: parseFloat(document.getElementById('s_valor').value) || 0,
+        qtd: parseFloat(document.getElementById('s_qtd').value) || 0,
+        min: parseFloat(document.getElementById('s_min').value) || 0
+    };
+    if (id) {
+        const idx = stockItems.findIndex(i => i.id == id);
+        stockItems[idx] = item;
+    } else {
+        stockItems.push(item);
+    }
+    renderStock();
+    closeStockModal();
+}
+
+function closeStockModal() {
+    document.getElementById('modal-overlay').style.display = 'none';
+    document.getElementById('stock-modal').style.display = 'none';
+}
+
+function removeStockItem(id) {
+    if (confirm("Excluir item do estoque?")) {
+        stockItems = stockItems.filter(i => i.id != id);
+        renderStock();
+    }
 }
 
 function updateSimItem(id, field, value) {

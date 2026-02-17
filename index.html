@@ -6,6 +6,7 @@
     <title>Santo Laser - Intranet</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
@@ -14,9 +15,9 @@
     <aside class="sidebar">
         <div class="logo-container">
             <div class="logo-circle">
-                <img src="https://i.ibb.co/LhYx0f9/Screenshot-8-LE-upscale-balanced-x4.jpg" alt="Santo Laser Logo" class="main-logo">
+                <img src="https://i.ibb.co/LhYx0f9/Screenshot-8-LE-upscale-balanced-x4.jpg" alt="Santo Laser Logo" class="main-logo" onerror="this.src='https://via.placeholder.com/80?text=SL'">
             </div>
-            <h1>SANTO LASER</h1>
+            <h1 style="font-family:'Orbitron'; color:var(--neon); font-size:1.2rem; margin:0;">SANTO LASER</h1>
         </div>
         <nav>
             <a href="#" class="nav-item active" onclick="showSection('dashboard')"><i class="fa-solid fa-chart-line"></i> DASHBOARD</a>
@@ -124,8 +125,8 @@
 
         <!-- ======================= CALCULADORA ======================= -->
         <div id="calculator-content" class="content-section">
-            <div class="calc-layout">
-                <div class="sidebar calc-inputs">
+            <div class="calc-container-fixed">
+                <div class="calc-inputs-scroll">
                     <div class="section-header">⚙️ Configurações Globais</div>
                     <div class="field-grid">
                         <div class="field"><label>Valor da Hora (R$)</label><input type="number" id="g_valor_hora" value="100" oninput="calc()"></div>
@@ -243,12 +244,24 @@
                 <h2>SIMULADOR DE METAS FINANCEIRAS</h2>
             </header>
             <div class="simulator-layout">
-                <div class="sim-sidebar">
+                <div class="sim-sidebar" style="background:var(--bg-panel); border-radius:16px; padding:25px; border:1px solid var(--border-color);">
                     <div class="section-header">🎯 Metas Desejadas</div>
-                    <div class="field"><label>Pró-labore (R$)</label><input type="number" id="sim-prolabore" value="2500" oninput="runSimulator()"></div>
-                    <div class="field"><label>Custos Fixos (R$)</label><input type="number" id="sim-fixos" value="1000" oninput="runSimulator()"></div>
-                    <div class="field"><label>Marketing (R$)</label><input type="number" id="sim-marketing" value="200" oninput="runSimulator()"></div>
-                    <div class="field"><label>Reserva/Investimento (R$)</label><input type="number" id="sim-reserva" value="500" oninput="runSimulator()"></div>
+                    <div class="field-group">
+                        <label>Pró-labore (R$)</label>
+                        <input type="number" id="sim-prolabore" value="2500" oninput="runSimulator()">
+                    </div>
+                    <div class="field-group">
+                        <label>Custos Fixos (R$)</label>
+                        <input type="number" id="sim-fixos" value="1000" oninput="runSimulator()">
+                    </div>
+                    <div class="field-group">
+                        <label>Marketing (R$)</label>
+                        <input type="number" id="sim-marketing" value="200" oninput="runSimulator()">
+                    </div>
+                    <div class="field-group">
+                        <label>Reserva/Investimento (R$)</label>
+                        <input type="number" id="sim-reserva" value="500" oninput="runSimulator()">
+                    </div>
                     <div class="sim-total-meta">
                         <small>META DE LUCRO TOTAL</small>
                         <h2 id="sim-meta-total">R$ 4.200,00</h2>
@@ -256,30 +269,48 @@
                 </div>
                 <div class="sim-main">
                     <div class="section-header">📊 Planejamento de Produtos/Serviços</div>
-                    <table class="sim-table">
-                        <thead>
-                            <tr>
-                                <th>NOME</th>
-                                <th>PREÇO VENDA</th>
-                                <th>MARGEM (%)</th>
-                                <th>VENDAS ATUAIS</th>
-                                <th>VENDAS NECESSÁRIAS</th>
-                                <th>FATURAMENTO PREVISTO</th>
-                            </tr>
-                        </thead>
-                        <tbody id="sim-table-body">
-                            <!-- Inserido via JS -->
-                        </tbody>
-                    </table>
-                    <button class="btn-action" onclick="addSimItem()">+ ADICIONAR PRODUTO AO SIMULADOR</button>
+                    <div class="table-container">
+                        <table class="crm-table">
+                            <thead>
+                                <tr>
+                                    <th>NOME</th>
+                                    <th>PREÇO VENDA</th>
+                                    <th>MARGEM (%)</th>
+                                    <th>VENDAS ATUAIS</th>
+                                    <th>VENDAS NECESSÁRIAS</th>
+                                    <th>AÇÕES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sim-table-body"></tbody>
+                        </table>
+                    </div>
+                    <button class="btn-modern btn-primary" style="margin-top:20px" onclick="addSimItem()">+ ADICIONAR PRODUTO</button>
                 </div>
             </div>
         </div>
 
         <!-- ======================= ESTOQUE ======================= -->
         <div id="stock-content" class="content-section">
-            <h2>ESTOQUE DE INSUMOS</h2>
-            <p>Módulo em desenvolvimento para controle de chapas, acrílicos e tintas.</p>
+            <div class="crm-header">
+                <h2>CONTROLE DE ESTOQUE</h2>
+                <button class="btn-modern btn-primary" onclick="openStockModal()">+ NOVO ITEM</button>
+            </div>
+            <div class="table-container">
+                <table class="crm-table">
+                    <thead>
+                        <tr>
+                            <th>ITEM</th>
+                            <th>CATEGORIA</th>
+                            <th>QTD ATUAL</th>
+                            <th>MÍNIMO</th>
+                            <th>VALOR UNIT.</th>
+                            <th>TOTAL</th>
+                            <th>AÇÕES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stock-table-body"></tbody>
+                </table>
+            </div>
         </div>
     </main>
 
@@ -345,11 +376,22 @@
                         <input type="number" id="m_lucro" placeholder="0.00">
                     </div>
                 </div>
+                <div class="field-group">
+                    <label>Resultado do Negócio</label>
+                    <div class="btn-group-modern">
+                        <button id="btn-venda" class="btn-modern" onclick="setResult('Venda')"><i class="fa-solid fa-check"></i> VENDA</button>
+                        <button id="btn-perda" class="btn-modern" onclick="setResult('Perda')"><i class="fa-solid fa-xmark"></i> PERDA</button>
+                    </div>
+                </div>
                 <input type="hidden" id="m_lead_id">
+                <input type="hidden" id="m_resultado">
             </div>
-            <div class="modal-footer">
-                <button class="btn-modern" onclick="closeLeadModal()">CANCELAR</button>
-                <button class="btn-modern btn-primary" onclick="saveLead()">SALVAR ALTERAÇÕES</button>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button class="btn-modern btn-danger" onclick="deleteLead()"><i class="fa-solid fa-trash"></i> EXCLUIR</button>
+                <div style="display:flex; gap:12px;">
+                    <button class="btn-modern" onclick="closeLeadModal()">CANCELAR</button>
+                    <button class="btn-modern btn-primary" onclick="saveLead()">SALVAR</button>
+                </div>
             </div>
         </div>
 
@@ -415,3 +457,43 @@
     <script src="script.js"></script>
 </body>
 </html>
+
+        <!-- Modal Estoque -->
+        <div id="stock-modal" class="modal-modern" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="stock-modal-title">ITEM DE ESTOQUE</h3>
+                <button class="close-btn" onclick="closeStockModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="field-group">
+                    <label>Nome do Item</label>
+                    <input type="text" id="s_nome" placeholder="Ex: Chapa Acrílico 3mm">
+                </div>
+                <div class="field-row">
+                    <div class="field-group">
+                        <label>Categoria</label>
+                        <input type="text" id="s_cat" placeholder="Ex: Chapas">
+                    </div>
+                    <div class="field-group">
+                        <label>Valor Unitário (R$)</label>
+                        <input type="number" id="s_valor" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field-group">
+                        <label>Quantidade Atual</label>
+                        <input type="number" id="s_qtd" placeholder="0">
+                    </div>
+                    <div class="field-group">
+                        <label>Estoque Mínimo</label>
+                        <input type="number" id="s_min" placeholder="0">
+                    </div>
+                </div>
+                <input type="hidden" id="s_item_id">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modern" onclick="closeStockModal()">CANCELAR</button>
+                <button class="btn-modern btn-primary" onclick="saveStockItem()">SALVAR</button>
+            </div>
+        </div>
+    </div>
