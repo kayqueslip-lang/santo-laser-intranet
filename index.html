@@ -22,10 +22,12 @@
         <nav>
             <a href="#" class="nav-item active" onclick="showSection('dashboard')"><i class="fa-solid fa-chart-line"></i> DASHBOARD</a>
             <a href="#" class="nav-item" onclick="showSection('crm')"><i class="fa-solid fa-users"></i> CRM</a>
+            <a href="#" class="nav-item" onclick="showSection('timeline')"><i class="fa-solid fa-calendar-days"></i> TIMELINE</a>
             <a href="#" class="nav-item" onclick="showSection('calculator')"><i class="fa-solid fa-calculator"></i> CALCULADORA OS</a>
             <a href="#" class="nav-item" onclick="showSection('cashflow')"><i class="fa-solid fa-money-bill-transfer"></i> FLUXO DE CAIXA</a>
             <a href="#" class="nav-item" onclick="showSection('simulator')"><i class="fa-solid fa-bullseye"></i> SIMULADOR METAS</a>
             <a href="#" class="nav-item" onclick="showSection('stock')"><i class="fa-solid fa-boxes-stacked"></i> ESTOQUE</a>
+            <a href="#" class="nav-item" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i> CONFIGURAÇÕES</a>
         </nav>
         <div class="theme-switch">
             <button id="theme-toggle" class="btn-theme" onclick="toggleTheme()">
@@ -51,7 +53,7 @@
                     <span class="value" id="dash-lucro">R$ 0,00</span>
                 </div>
                 <div class="kpi-card">
-                    <small>Pedidos Ativos</small>
+                    <small id="label-pedidos-ativos">Pedidos Ativos</small>
                     <span class="value" id="dash-pedidos">0</span>
                 </div>
                 <div class="kpi-card">
@@ -86,25 +88,25 @@
             </div>
 
             <div id="kanban-view" class="kanban-container">
-                <div class="kanban-column" ondrop="drop(event, 'Proposta Enviada')" ondragover="allowDrop(event)">
-                    <div class="column-header">PROPOSTA ENVIADA <span class="count" id="count-proposta-enviada">0</span></div>
-                    <div class="kanban-cards" id="cards-proposta-enviada"></div>
+                <div class="kanban-column" id="col-1" ondrop="drop(event, 0)" ondragover="allowDrop(event)">
+                    <div class="column-header"><span id="label-step-1">PASSO 1</span> <span class="count" id="count-0">0</span></div>
+                    <div class="kanban-cards" id="cards-0"></div>
                 </div>
-                <div class="kanban-column" ondrop="drop(event, 'Aprovado')" ondragover="allowDrop(event)">
-                    <div class="column-header">APROVADO <span class="count" id="count-aprovado">0</span></div>
-                    <div class="kanban-cards" id="cards-aprovado"></div>
+                <div class="kanban-column" id="col-2" ondrop="drop(event, 1)" ondragover="allowDrop(event)">
+                    <div class="column-header"><span id="label-step-2">PASSO 2</span> <span class="count" id="count-1">0</span></div>
+                    <div class="kanban-cards" id="cards-1"></div>
                 </div>
-                <div class="kanban-column" ondrop="drop(event, 'Produção')" ondragover="allowDrop(event)">
-                    <div class="column-header">PRODUÇÃO <span class="count" id="count-producao">0</span></div>
-                    <div class="kanban-cards" id="cards-producao"></div>
+                <div class="kanban-column" id="col-3" ondrop="drop(event, 2)" ondragover="allowDrop(event)">
+                    <div class="column-header"><span id="label-step-3">PASSO 3</span> <span class="count" id="count-2">0</span></div>
+                    <div class="kanban-cards" id="cards-2"></div>
                 </div>
-                <div class="kanban-column" ondrop="drop(event, 'Finalizado')" ondragover="allowDrop(event)">
-                    <div class="column-header">FINALIZADO <span class="count" id="count-finalizado">0</span></div>
-                    <div class="kanban-cards" id="cards-finalizado"></div>
+                <div class="kanban-column" id="col-4" ondrop="drop(event, 3)" ondragover="allowDrop(event)">
+                    <div class="column-header"><span id="label-step-4">PASSO 4</span> <span class="count" id="count-3">0</span></div>
+                    <div class="kanban-cards" id="cards-3"></div>
                 </div>
-                <div class="kanban-column" ondrop="drop(event, 'Pago')" ondragover="allowDrop(event)">
-                    <div class="column-header">PAGO <span class="count" id="count-pago">0</span></div>
-                    <div class="kanban-cards" id="cards-pago"></div>
+                <div class="kanban-column" id="col-5" ondrop="drop(event, 4)" ondragover="allowDrop(event)">
+                    <div class="column-header"><span id="label-step-5">PASSO 5</span> <span class="count" id="count-4">0</span></div>
+                    <div class="kanban-cards" id="cards-4"></div>
                 </div>
             </div>
 
@@ -125,6 +127,16 @@
             </div>
         </div>
 
+        <!-- ======================= TIMELINE ======================= -->
+        <div id="timeline-content" class="content-section">
+            <header>
+                <h2>LINHA DO TEMPO DE PROJETOS</h2>
+            </header>
+            <div class="timeline-container" id="timeline-wrapper">
+                <!-- Preenchido via JS -->
+            </div>
+        </div>
+
         <!-- ======================= CALCULADORA ======================= -->
         <div id="calculator-content" class="content-section">
             <div class="calc-main-layout">
@@ -132,11 +144,11 @@
                     <div class="section-header">⚙️ Configurações Globais</div>
                     <div class="field-row">
                         <div class="field-group">
-                            <label>Valor da Hora (R$)</label>
+                            <label id="label-valor-hora">Valor da Hora (R$)</label>
                             <input type="number" id="g_valor_hora" value="100" oninput="calc()">
                         </div>
                         <div class="field-group">
-                            <label>Imposto (%)</label>
+                            <label id="label-imposto">Imposto (%)</label>
                             <input type="number" id="g_imposto" value="6" oninput="calc()">
                         </div>
                     </div>
@@ -237,9 +249,26 @@
             </div>
 
             <div class="filter-bar">
-                <input type="date" id="filter-start" onchange="renderFinance()">
-                <span>até</span>
-                <input type="date" id="filter-end" onchange="renderFinance()">
+                <div class="filter-group">
+                    <label>Período</label>
+                    <input type="date" id="filter-start" onchange="renderFinance()">
+                    <span>até</span>
+                    <input type="date" id="filter-end" onchange="renderFinance()">
+                </div>
+                <div class="filter-group">
+                    <label>Tipo</label>
+                    <select id="filter-type" onchange="renderFinance()">
+                        <option value="">Todos</option>
+                        <option value="Entrada">Entrada</option>
+                        <option value="Saída">Saída</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Categoria</label>
+                    <select id="filter-cat" onchange="renderFinance()">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
                 <button class="btn-modern" onclick="clearFinanceFilters()">LIMPAR</button>
             </div>
 
@@ -269,19 +298,19 @@
                 <div class="sim-sidebar">
                     <div class="section-header">🎯 Metas Desejadas</div>
                     <div class="field-group">
-                        <label>Pró-labore (R$)</label>
+                        <label id="label-prolabore">Pró-labore (R$)</label>
                         <input type="number" id="sim-prolabore" value="2500" oninput="runSimulator()">
                     </div>
                     <div class="field-group">
-                        <label>Custos Fixos (R$)</label>
+                        <label id="label-custos-fixos">Custos Fixos (R$)</label>
                         <input type="number" id="sim-fixos" value="1000" oninput="runSimulator()">
                     </div>
                     <div class="field-group">
-                        <label>Marketing (R$)</label>
+                        <label id="label-marketing">Marketing (R$)</label>
                         <input type="number" id="sim-marketing" value="200" oninput="runSimulator()">
                     </div>
                     <div class="field-group">
-                        <label>Reserva/Investimento (R$)</label>
+                        <label id="label-reserva">Reserva/Investimento (R$)</label>
                         <input type="number" id="sim-reserva" value="500" oninput="runSimulator()">
                     </div>
                     <div class="sim-total-meta">
@@ -334,6 +363,39 @@
                 </table>
             </div>
         </div>
+
+        <!-- ======================= CONFIGURAÇÕES ======================= -->
+        <div id="settings-content" class="content-section">
+            <header>
+                <h2>CONFIGURAÇÕES DO SISTEMA</h2>
+            </header>
+            <div class="settings-grid">
+                <div class="settings-card">
+                    <h3>Personalizar Etapas do CRM</h3>
+                    <div class="field-group"><label>Etapa 1</label><input type="text" id="set-step-1" onchange="saveSettings()"></div>
+                    <div class="field-group"><label>Etapa 2</label><input type="text" id="set-step-2" onchange="saveSettings()"></div>
+                    <div class="field-group"><label>Etapa 3</label><input type="text" id="set-step-3" onchange="saveSettings()"></div>
+                    <div class="field-group"><label>Etapa 4</label><input type="text" id="set-step-4" onchange="saveSettings()"></div>
+                    <div class="field-group"><label>Etapa 5</label><input type="text" id="set-step-5" onchange="saveSettings()"></div>
+                </div>
+                <div class="settings-card">
+                    <h3>Rótulos do Simulador</h3>
+                    <div class="field-group"><label>Campo 1</label><input type="text" id="set-label-1" onchange="saveSettings()"></div>
+                    <div class="field-group"><label>Campo 2</label><input type="text" id="set-label-2" onchange="saveSettings()"></div>
+                    <div class="field-group"><label>Campo 3</label><input type="text" id="set-label-3" onchange="saveSettings()"></div>
+                    <div class="field-group"><label>Campo 4</label><input type="text" id="set-label-4" onchange="saveSettings()"></div>
+                </div>
+                <div class="settings-card">
+                    <h3>Categorias Financeiras</h3>
+                    <div id="settings-categories-list"></div>
+                    <button class="btn-modern btn-primary" onclick="addCategory()">+ ADICIONAR CATEGORIA</button>
+                </div>
+                <div class="settings-card">
+                    <h3>Backup e Dados</h3>
+                    <button class="btn-modern btn-danger" onclick="resetSystem()"><i class="fa-solid fa-triangle-exclamation"></i> RESETAR TODOS OS DADOS</button>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- ======================= MODAIS ======================= -->
@@ -357,11 +419,11 @@
                     <div class="field-group">
                         <label>Status Atual</label>
                         <select id="m_status">
-                            <option value="Proposta Enviada">Proposta Enviada</option>
-                            <option value="Aprovado">Aprovado</option>
-                            <option value="Produção">Produção</option>
-                            <option value="Finalizado">Finalizado</option>
-                            <option value="Pago">Pago</option>
+                            <option value="0" id="opt-step-1">Passo 1</option>
+                            <option value="1" id="opt-step-2">Passo 2</option>
+                            <option value="2" id="opt-step-3">Passo 3</option>
+                            <option value="3" id="opt-step-4">Passo 4</option>
+                            <option value="4" id="opt-step-5">Passo 5</option>
                         </select>
                     </div>
                 </div>
@@ -428,7 +490,7 @@
                     </div>
                     <div class="field-group">
                         <label>Categoria</label>
-                        <input type="text" id="f_cat" placeholder="Ex: Materiais">
+                        <select id="f_cat_select"></select>
                     </div>
                 </div>
                 <div class="field-group">

@@ -153,3 +153,21 @@ header h2 { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; color: var
     #quote-to-print, #quote-to-print * { visibility: visible; }
     #quote-to-print { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; padding: 0; }
 }
+
+/* Timeline Styles */
+.timeline-container { padding: 20px; background: var(--bg-panel); border-radius: 16px; border: 1px solid var(--border-color); overflow-x: auto; }
+.timeline-row { display: flex; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border-color); min-width: 800px; }
+.timeline-client { width: 200px; font-weight: 700; color: var(--neon); }
+.timeline-track { flex: 1; position: relative; height: 30px; background: rgba(255,255,255,0.02); border-radius: 15px; }
+.timeline-bar { position: absolute; height: 100%; background: var(--neon); border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #000; font-weight: 800; box-shadow: 0 0 10px var(--neon-dim); }
+
+/* Settings Styles */
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.settings-card { background: var(--bg-panel); padding: 25px; border-radius: 16px; border: 1px solid var(--border-color); }
+.settings-card h3 { font-family: 'Orbitron'; font-size: 0.9rem; color: var(--neon); margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+
+/* Filter Bar Improvements */
+.filter-bar { flex-wrap: wrap; gap: 20px; }
+.filter-group { display: flex; flex-direction: column; gap: 5px; }
+.filter-group label { font-size: 0.7rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; }
+.filter-group select, .filter-group input { background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px; border-radius: 6px; min-width: 120px; }

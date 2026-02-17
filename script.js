@@ -7,29 +7,30 @@ let transactions = JSON.parse(localStorage.getItem('santo_transactions')) || [];
 let simItems = JSON.parse(localStorage.getItem('santo_sim_items')) || [];
 let stockItems = JSON.parse(localStorage.getItem('santo_stock_items')) || [];
 let initialBalance = parseFloat(localStorage.getItem('santo_initial_balance')) || 0;
+let settings = JSON.parse(localStorage.getItem('santo_settings')) || {
+    steps: ["Proposta Enviada", "Aprovado", "Produção", "Finalizado", "Pago"],
+    simLabels: ["Pró-labore", "Custos Fixos", "Marketing", "Reserva/Investimento"],
+    categories: ["Materiais", "Energia", "Marketing", "Vendas CRM", "Outros"]
+};
 let items = []; // Itens da calculadora atual
-
-// Logo em Base64 (integrada para evitar erro 404)
-const LOGO_BASE64 = "data:image/jpeg;base64," + localStorage.getItem('santo_logo_cache') || "";
 
 // ================================================================================= //
 //                                 INICIALIZAÇÃO                                     //
 // ================================================================================= //
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Tenta carregar a logo do arquivo gerado se não estiver no cache
+    // Carregar Logo
     fetch('logo_base64.txt').then(r => r.text()).then(base64 => {
         if (base64) {
             const fullBase64 = "data:image/jpeg;base64," + base64;
-            localStorage.setItem('santo_logo_cache', base64);
             document.getElementById('main-logo-img').src = fullBase64;
             document.getElementById('quote-logo-img').src = fullBase64;
         }
     }).catch(() => {
-        // Fallback se falhar
         document.getElementById('main-logo-img').src = "https://via.placeholder.com/80?text=SL";
     });
 
+    applySettings();
     updateCurrentDate();
     renderCRM();
     renderFinance();
@@ -44,12 +45,17 @@ function updateCurrentDate() {
     document.getElementById('current-date').innerText = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
+// Formatação BRL Profissional
+function formatBRL(val) {
+    return parseFloat(val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
 // ================================================================================= //
 //                                     NAVEGAÇÃO                                     //
 // ================================================================================= //
 
 function showSection(sectionId) {
-    closeAllModals(); // Fecha modais ao trocar de aba
+    closeAllModals();
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     
@@ -61,6 +67,8 @@ function showSection(sectionId) {
     if (sectionId === 'cashflow') renderFinance();
     if (sectionId === 'simulator') runSimulator();
     if (sectionId === 'stock') renderStock();
+    if (sectionId === 'timeline') renderTimeline();
+    if (sectionId === 'settings') loadSettingsPage();
 }
 
 function closeAllModals() {
@@ -81,6 +89,87 @@ function toggleTheme() {
 }
 
 // ================================================================================= //
+//                                     SETTINGS                                      //
+// ================================================================================= //
+
+function applySettings() {
+    // Aplicar nomes das etapas no CRM e Modais
+    for (let i = 0; i < 5; i++) {
+        const label = document.getElementById(`label-step-${i+1}`);
+        const opt = document.getElementById(`opt-step-${i+1}`);
+        if (label) label.innerText = settings.steps[i].toUpperCase();
+        if (opt) opt.innerText = settings.steps[i];
+    }
+
+    // Aplicar rótulos do Simulador
+    const labels = [
+        {id: 'label-prolabore', text: settings.simLabels[0]},
+        {id: 'label-custos-fixos', text: settings.simLabels[1]},
+        {id: 'label-marketing', text: settings.simLabels[2]},
+        {id: 'label-reserva', text: settings.simLabels[3]}
+    ];
+    labels.forEach(l => {
+        const el = document.getElementById(l.id);
+        if (el) el.innerText = `${l.text} (R$)`;
+    });
+
+    // Atualizar categorias no filtro e no modal financeiro
+    const filterCat = document.getElementById('filter-cat');
+    const modalCat = document.getElementById('f_cat_select');
+    if (filterCat && modalCat) {
+        filterCat.innerHTML = '<option value="">Todas</option>';
+        modalCat.innerHTML = '';
+        settings.categories.forEach(cat => {
+            filterCat.innerHTML += `<option value="${cat}">${cat}</option>`;
+            modalCat.innerHTML += `<option value="${cat}">${cat}</option>`;
+        });
+    }
+}
+
+function loadSettingsPage() {
+    for (let i = 0; i < 5; i++) {
+        document.getElementById(`set-step-${i+1}`).value = settings.steps[i];
+    }
+    for (let i = 0; i < 4; i++) {
+        document.getElementById(`set-label-${i+1}`).value = settings.simLabels[i];
+    }
+    renderSettingsCategories();
+}
+
+function renderSettingsCategories() {
+    const list = document.getElementById('settings-categories-list');
+    list.innerHTML = "";
+    settings.categories.forEach((cat, idx) => {
+        const div = document.createElement('div');
+        div.className = 'field-row';
+        div.style.marginBottom = '10px';
+        div.innerHTML = `
+            <input type="text" value="${cat}" onchange="updateCategory(${idx}, this.value)">
+            <button class="btn-modern btn-danger" onclick="removeCategory(${idx})"><i class="fa-solid fa-trash"></i></button>
+        `;
+        list.appendChild(div);
+    });
+}
+
+function updateCategory(idx, val) { settings.categories[idx] = val; saveSettings(); }
+function removeCategory(idx) { settings.categories.splice(idx, 1); saveSettings(); renderSettingsCategories(); }
+function addCategory() { settings.categories.push("Nova Categoria"); saveSettings(); renderSettingsCategories(); }
+
+function saveSettings() {
+    for (let i = 0; i < 5; i++) settings.steps[i] = document.getElementById(`set-step-${i+1}`).value;
+    for (let i = 0; i < 4; i++) settings.simLabels[i] = document.getElementById(`set-label-${i+1}`).value;
+    localStorage.setItem('santo_settings', JSON.stringify(settings));
+    applySettings();
+}
+
+function resetSystem() {
+    if (confirm("ATENÇÃO: Isso apagará TODOS os dados do sistema. Deseja continuar?")) {
+        localStorage.clear();
+        location.reload();
+    }
+}
+
+// ================================================================================= //
 //                                     DASHBOARD                                     //
 // ================================================================================= //
 
@@ -90,21 +179,21 @@ function updateDashboard() {
     const currentYear = now.getFullYear();
 
     const paidLeadsMonth = leads.filter(l => {
-        if (l.status !== 'Pago' || !l.entrega || l.resultado === 'Perda') return false;
+        if (l.status != 4 || !l.entrega || l.resultado === 'Perda') return false; // 4 = Pago
         const d = new Date(l.entrega + 'T00:00:00');
         return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
 
     const faturamento = paidLeadsMonth.reduce((acc, l) => acc + parseFloat(l.valor || 0), 0);
     const lucro = paidLeadsMonth.reduce((acc, l) => acc + parseFloat(l.lucro || 0), 0);
-    const pedidosAtivos = leads.filter(l => l.status === 'Aprovado' || l.status === 'Produção').length;
+    const pedidosAtivos = leads.filter(l => (l.status == 1 || l.status == 2) && l.resultado !== 'Perda').length; // 1=Aprovado, 2=Produção
     
-    const totalFinalizados = leads.filter(l => l.status === 'Pago' || l.resultado === 'Perda').length;
-    const totalVendas = leads.filter(l => l.status === 'Pago' && l.resultado !== 'Perda').length;
+    const totalFinalizados = leads.filter(l => l.status == 4 || l.resultado === 'Perda').length;
+    const totalVendas = leads.filter(l => l.status == 4 && l.resultado === 'Venda').length;
     const conversao = totalFinalizados > 0 ? (totalVendas / totalFinalizados * 100).toFixed(1) : 0;
 
-    document.getElementById('dash-faturamento').innerText = `R$ ${faturamento.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    document.getElementById('dash-lucro').innerText = `R$ ${lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    document.getElementById('dash-faturamento').innerText = formatBRL(faturamento);
+    document.getElementById('dash-lucro').innerText = formatBRL(lucro);
     document.getElementById('dash-pedidos').innerText = pedidosAtivos;
     document.getElementById('dash-conversao').innerText = `${conversao}%`;
     
@@ -117,7 +206,6 @@ function renderCharts() {
     if (!ctxOrigem || !ctxStatus) return;
     
     if (window.Chart) {
-        // Gráfico de Origem
         if (window.myChartOrigem) window.myChartOrigem.destroy();
         const origens = {};
         leads.forEach(l => origens[l.origem] = (origens[l.origem] || 0) + 1);
@@ -135,18 +223,17 @@ function renderCharts() {
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } } }
         });
 
-        // Gráfico de Status
         if (window.myChartStatus) window.myChartStatus.destroy();
-        const statusCount = {};
-        leads.forEach(l => statusCount[l.status] = (statusCount[l.status] || 0) + 1);
+        const statusCount = [0,0,0,0,0];
+        leads.forEach(l => { if (l.status < 5) statusCount[l.status]++; });
 
         window.myChartStatus = new Chart(ctxStatus, {
             type: 'bar',
             data: {
-                labels: Object.keys(statusCount),
+                labels: settings.steps,
                 datasets: [{
                     label: 'Leads',
-                    data: Object.values(statusCount),
+                    data: statusCount,
                     backgroundColor: '#00e6cb'
                 }]
             },
@@ -168,21 +255,16 @@ function renderCharts() {
 // ================================================================================= //
 
 function renderCRM() {
-    const statuses = ["Proposta Enviada", "Aprovado", "Produção", "Finalizado", "Pago"];
     const tableBody = document.getElementById('crm-table-body');
     if (tableBody) tableBody.innerHTML = "";
 
-    statuses.forEach(status => {
-        const columnId = `cards-${status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-')}`;
-        const countId = `count-${status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-')}`;
-        
-        const column = document.getElementById(columnId);
-        const countEl = document.getElementById(countId);
-        
-        if (!column) return;
+    for (let i = 0; i < 5; i++) {
+        const column = document.getElementById(`cards-${i}`);
+        const countEl = document.getElementById(`count-${i}`);
+        if (!column) continue;
         column.innerHTML = "";
         
-        const filteredLeads = leads.filter(l => l.status === status && l.resultado !== 'Perda' && !l.excluido);
+        const filteredLeads = leads.filter(l => l.status == i && l.resultado !== 'Perda');
         if (countEl) countEl.innerText = filteredLeads.length;
 
         filteredLeads.forEach(lead => {
@@ -201,27 +283,26 @@ function renderCRM() {
                 <div class="card-title">${lead.cliente}</div>
                 ${lead.empresa ? `<div class="card-company">${lead.empresa}</div>` : ''}
                 <div class="card-meta">
-                    <span class="tag price">R$ ${parseFloat(lead.valor || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}</span>
+                    <span class="tag price">${formatBRL(lead.valor)}</span>
                     ${lead.entrega ? `<span class="tag date">${new Date(lead.entrega + 'T00:00:00').toLocaleDateString('pt-BR')}</span>` : ''}
                 </div>
             `;
             column.appendChild(card);
 
-            // Adiciona na tabela também
             if (tableBody) {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${lead.cliente}</td>
                     <td>${lead.empresa || '-'}</td>
-                    <td><span class="tag price">${lead.status}</span></td>
-                    <td>R$ ${parseFloat(lead.valor || 0).toFixed(2)}</td>
+                    <td><span class="tag price">${settings.steps[lead.status]}</span></td>
+                    <td>${formatBRL(lead.valor)}</td>
                     <td>${lead.entrega ? new Date(lead.entrega + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
                     <td><button class="btn-modern" onclick="editLead('${lead.id}')"><i class="fa-solid fa-pen"></i></button></td>
                 `;
                 tableBody.appendChild(row);
             }
         });
-    });
+    }
     localStorage.setItem('santo_leads', JSON.stringify(leads));
 }
 
@@ -243,7 +324,7 @@ function openLeadModal() {
     document.getElementById('m_lead_id').value = "";
     document.getElementById('m_cliente').value = "";
     document.getElementById('m_empresa').value = "";
-    document.getElementById('m_status').value = "Proposta Enviada";
+    document.getElementById('m_status').value = "0";
     document.getElementById('m_origem').value = "WhatsApp";
     document.getElementById('m_entrega').value = "";
     document.getElementById('m_valor').value = "";
@@ -282,11 +363,11 @@ function saveLead() {
         id: id || Date.now().toString(),
         cliente: document.getElementById('m_cliente').value,
         empresa: document.getElementById('m_empresa').value,
-        status: document.getElementById('m_status').value,
+        status: parseInt(document.getElementById('m_status').value),
         origem: document.getElementById('m_origem').value,
         entrega: document.getElementById('m_entrega').value,
-        valor: document.getElementById('m_valor').value,
-        lucro: document.getElementById('m_lucro').value,
+        valor: parseFloat(document.getElementById('m_valor').value) || 0,
+        lucro: parseFloat(document.getElementById('m_lucro').value) || 0,
         resultado: document.getElementById('m_resultado').value
     };
 
@@ -347,6 +428,48 @@ function toggleCRMView() {
         kanban.style.display = 'none';
         table.style.display = 'block';
     }
+}
+
+// ================================================================================= //
+//                                   TIMELINE                                        //
+// ================================================================================= //
+
+function renderTimeline() {
+    const container = document.getElementById('timeline-wrapper');
+    container.innerHTML = "";
+    
+    // Filtra apenas pedidos em andamento (Aprovado e Produção)
+    const activeLeads = leads.filter(l => (l.status == 1 || l.status == 2) && l.entrega && l.resultado !== 'Perda');
+    
+    if (activeLeads.length === 0) {
+        container.innerHTML = "<p style='text-align:center; padding:40px; color:var(--text-secondary)'>Nenhum pedido em produção com data de entrega definida.</p>";
+        return;
+    }
+
+    activeLeads.sort((a, b) => new Date(a.entrega) - new Date(b.entrega));
+
+    activeLeads.forEach(l => {
+        const row = document.createElement('div');
+        row.className = 'timeline-row';
+        
+        const entrega = new Date(l.entrega + 'T00:00:00');
+        const hoje = new Date();
+        const diffDays = Math.ceil((entrega - hoje) / (1000 * 60 * 60 * 24));
+        
+        // Calcula largura da barra (exemplo: 1 dia = 50px)
+        const barWidth = Math.max(diffDays * 30, 100);
+        
+        row.innerHTML = `
+            <div class="timeline-client">${l.cliente}</div>
+            <div class="timeline-track">
+                <div class="timeline-bar" style="width: ${Math.min(barWidth, 600)}px">
+                    ${diffDays < 0 ? 'ATRASADO' : `ENTREGA EM ${diffDays} DIAS`}
+                </div>
+            </div>
+            <div style="width:100px; text-align:right; font-size:0.8rem">${entrega.toLocaleDateString('pt-BR')}</div>
+        `;
+        container.appendChild(row);
+    });
 }
 
 // ================================================================================= //
@@ -422,25 +545,23 @@ function calc() {
         const custoTempo = tempoTotal * valorMinuto;
         const custoTotalItem = (custoTempo + item.mat) * item.qtd;
         
-        // Simplificação: Preço de venda = Custo * 2 (Margem 100% sobre custo) + impostos
         const precoVendaBase = custoTotalItem * 2;
         totalBruto += precoVendaBase;
         lucroTotal += (precoVendaBase - custoTotalItem);
 
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${item.qtd}x</td><td>${item.nome || 'Item sem nome'}</td><td>R$ ${precoVendaBase.toFixed(2)}</td>`;
+        row.innerHTML = `<td>${item.qtd}x</td><td>${item.nome || 'Item sem nome'}</td><td>${formatBRL(precoVendaBase)}</td>`;
         cardBody.appendChild(row);
     });
 
     let totalFinal = (totalBruto + freteCliente) * (1 - descontoPorc);
     totalFinal = totalFinal / (1 - impostoPorc - taxaCartao);
 
-    document.getElementById('card_total').innerText = `R$ ${totalFinal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    document.getElementById('card_total').innerText = formatBRL(totalFinal);
     document.getElementById('display_nome_cliente').innerText = document.getElementById('g_cliente').value || "Não informado";
     const dataProp = document.getElementById('g_data_proposta').value;
     document.getElementById('display_data_proposta').innerText = dataProp ? new Date(dataProp + 'T00:00:00').toLocaleDateString('pt-BR') : "";
 
-    // Armazena lucro para o CRM
     window.lastCalcLucro = lucroTotal;
     window.lastCalcTotal = totalFinal;
 }
@@ -453,12 +574,12 @@ function sendToCRM() {
         id: Date.now().toString(),
         cliente: nome,
         empresa: "",
-        status: "Proposta Enviada",
+        status: 0,
         origem: "WhatsApp",
         entrega: document.getElementById('g_data_proposta').value,
         valor: window.lastCalcTotal || 0,
         lucro: window.lastCalcLucro || 0,
-        resultado: ""
+        resultado: "Venda"
     };
     leads.push(newLead);
     renderCRM();
@@ -486,9 +607,10 @@ function renderFinance() {
 
     const start = document.getElementById('filter-start').value;
     const end = document.getElementById('filter-end').value;
+    const type = document.getElementById('filter-type').value;
+    const catFilter = document.getElementById('filter-cat').value;
 
-    // Adiciona transações automáticas de leads pagos
-    const autoTransactions = leads.filter(l => l.status === 'Pago' && l.resultado !== 'Perda').map(l => ({
+    const autoTransactions = leads.filter(l => l.status == 4 && l.resultado === 'Venda').map(l => ({
         id: `auto-${l.id}`,
         data: l.entrega || new Date().toISOString().split('T')[0],
         desc: `VENDA: ${l.cliente}`,
@@ -505,6 +627,8 @@ function renderFinance() {
     allTransactions.forEach(t => {
         if (start && t.data < start) return;
         if (end && t.data > end) return;
+        if (type && t.tipo !== type) return;
+        if (catFilter && t.cat !== catFilter) return;
 
         if (t.tipo === 'Entrada') entradas += t.valor;
         else saidas += t.valor;
@@ -515,15 +639,19 @@ function renderFinance() {
             <td>${t.desc}</td>
             <td><span class="tag ${t.tipo === 'Entrada' ? 'price' : 'date'}" style="color:${t.tipo === 'Entrada' ? 'var(--success)' : 'var(--danger)'}">${t.tipo.toUpperCase()}</span></td>
             <td>${t.cat}</td>
-            <td>R$ ${t.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
-            <td>${t.id.toString().startsWith('auto') ? '' : `<button class="btn-modern btn-danger" onclick="deleteTransaction(${t.id})"><i class="fa-solid fa-trash"></i></button>`}</td>
+            <td>${formatBRL(t.valor)}</td>
+            <td>
+                ${t.id.toString().startsWith('auto') ? '' : `
+                    <button class="btn-modern btn-danger" onclick="deleteTransaction(${t.id})"><i class="fa-solid fa-trash"></i></button>
+                `}
+            </td>
         `;
         body.appendChild(row);
     });
 
-    document.getElementById('fin-entradas').innerText = `R$ ${entradas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('fin-saidas').innerText = `R$ ${saidas.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
-    document.getElementById('fin-saldo').innerText = `R$ ${(initialBalance + entradas - saidas).toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    document.getElementById('fin-entradas').innerText = formatBRL(entradas);
+    document.getElementById('fin-saidas').innerText = formatBRL(saidas);
+    document.getElementById('fin-saldo').innerText = formatBRL(initialBalance + entradas - saidas);
     
     localStorage.setItem('santo_transactions', JSON.stringify(transactions));
 }
@@ -533,7 +661,6 @@ function openFinanceModal(tipo) {
     document.getElementById('fin-modal-title').innerText = `NOVA ${tipo.toUpperCase()}`;
     document.getElementById('f_desc').value = "";
     document.getElementById('f_valor').value = "";
-    document.getElementById('f_cat').value = "";
     document.getElementById('f_data').value = new Date().toISOString().split('T')[0];
     document.getElementById('modal-overlay').style.display = 'flex';
     document.getElementById('finance-modal').style.display = 'block';
@@ -544,7 +671,7 @@ function saveTransaction() {
         id: Date.now(),
         desc: document.getElementById('f_desc').value,
         valor: parseFloat(document.getElementById('f_valor').value) || 0,
-        cat: document.getElementById('f_cat').value,
+        cat: document.getElementById('f_cat_select').value,
         data: document.getElementById('f_data').value,
         tipo: document.getElementById('f_tipo').value
     };
@@ -555,8 +682,10 @@ function saveTransaction() {
 }
 
 function deleteTransaction(id) {
-    transactions = transactions.filter(t => t.id !== id);
-    renderFinance();
+    if (confirm("Excluir transação?")) {
+        transactions = transactions.filter(t => t.id !== id);
+        renderFinance();
+    }
 }
 
 function openInitialBalanceModal() {
@@ -571,6 +700,8 @@ function openInitialBalanceModal() {
 function clearFinanceFilters() {
     document.getElementById('filter-start').value = "";
     document.getElementById('filter-end').value = "";
+    document.getElementById('filter-type').value = "";
+    document.getElementById('filter-cat').value = "";
     renderFinance();
 }
 
@@ -584,7 +715,7 @@ function runSimulator() {
                       (parseFloat(document.getElementById('sim-marketing').value) || 0) +
                       (parseFloat(document.getElementById('sim-reserva').value) || 0);
     
-    document.getElementById('sim-meta-total').innerText = `R$ ${metaLucro.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    document.getElementById('sim-meta-total').innerText = formatBRL(metaLucro);
 
     const tableBody = document.getElementById('sim-table-body');
     tableBody.innerHTML = "";
@@ -642,8 +773,8 @@ function renderStock() {
             <td>${item.cat}</td>
             <td style="color: ${lowStock ? 'var(--danger)' : 'inherit'}">${item.qtd} ${lowStock ? '<i class="fa-solid fa-triangle-exclamation"></i>' : ''}</td>
             <td>${item.min}</td>
-            <td>R$ ${parseFloat(item.valor).toFixed(2)}</td>
-            <td>R$ ${(item.qtd * item.valor).toFixed(2)}</td>
+            <td>${formatBRL(item.valor)}</td>
+            <td>${formatBRL(item.qtd * item.valor)}</td>
             <td>
                 <button class="btn-modern" onclick="editStockItem(${item.id})"><i class="fa-solid fa-pen"></i></button>
                 <button class="btn-modern btn-danger" onclick="removeStockItem(${item.id})"><i class="fa-solid fa-trash"></i></button>
@@ -705,6 +836,5 @@ function removeStockItem(id) {
     }
 }
 
-function closeStockModal() {
-    closeAllModals();
-}
+function closeStockModal() { closeAllModals(); }
+function closeFinanceModal() { closeAllModals(); }
