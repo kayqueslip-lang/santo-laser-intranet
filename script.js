@@ -9,7 +9,7 @@ let stockItems = JSON.parse(localStorage.getItem('santo_stock_items')) || [];
 let initialBalance = parseFloat(localStorage.getItem('santo_initial_balance')) || 0;
 let settings = JSON.parse(localStorage.getItem('santo_settings')) || {
     steps: ["Proposta Enviada", "Aprovado", "Produção", "Finalizado", "Pago"],
-    simLabels: ["Pró-labore", "Custos Fixos", "Marketing", "Reserva/Investimento"],
+    simLabels: ["Pró-labore", "Custos Fixos", "Marketing", "Reserva/Investimento", "DAS"],
     categories: ["Materiais", "Energia", "Marketing", "Vendas CRM", "Outros"]
 };
 let items = []; 
@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (base64) {
             const fullBase64 = "data:image/jpeg;base64," + base64;
             document.getElementById('main-logo-img').src = fullBase64;
-            document.getElementById('quote-logo-img').src = fullBase64;
         }
     }).catch(() => {
         document.getElementById('main-logo-img').src = "https://via.placeholder.com/150?text=SANTO+LASER";
@@ -65,7 +64,7 @@ function showSection(sectionId) {
     if (sectionId === 'crm') renderCRM();
     if (sectionId === 'cashflow') renderFinance();
     if (sectionId === 'dre') renderDRE();
-    if (sectionId === 'simulator') runSimulator();
+    if (sectionId === 'simulator') renderSimInputs();
     if (sectionId === 'stock') renderStock();
     if (sectionId === 'settings') loadSettingsPage();
     if (sectionId === 'calculator') updateLeadSelect();
@@ -238,16 +237,15 @@ function renderCharts(year, month, dre, pipeline) {
 
     const ctxOrigem = document.getElementById('chart-origem');
     if (ctxOrigem) {
-        const counts = {};
-        leads.forEach(l => counts[l.origem] = (counts[l.origem] || 0) + 1);
+        const origens = leads.reduce((acc, l) => { acc[l.origem] = (acc[l.origem] || 0) + 1; return acc; }, {});
         if (window.myChartOrigem) window.myChartOrigem.destroy();
         window.myChartOrigem = new Chart(ctxOrigem, {
-            type: 'pie',
+            type: 'polarArea',
             data: {
-                labels: Object.keys(counts),
-                datasets: [{ data: Object.values(counts), backgroundColor: ['#00e6cb', '#2979ff', '#ffea00', '#ff1744', '#7c4dff'] }]
+                labels: Object.keys(origens),
+                datasets: [{ data: Object.values(origens), backgroundColor: ['#00e6cb', '#2979ff', '#ffea00', '#ff1744', '#7c4dff'] }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: textColor } } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: textColor } } }, scales: { r: { grid: { color: gridColor }, ticks: { display: false } } } }
         });
     }
 }
@@ -256,201 +254,40 @@ function renderTimeline() {
     const container = document.getElementById('timeline-wrapper');
     if (!container) return;
     container.innerHTML = "";
-    const active = leads.filter(l => (l.status == 1 || l.status == 2) && l.entrega).sort((a, b) => new Date(a.entrega) - new Date(b.entrega));
+    
+    const active = leads.filter(l => (l.status == 1 || l.status == 2) && l.entrega && l.resultado !== 'Perda')
+                        .sort((a, b) => new Date(a.entrega) - new Date(b.entrega));
     
     if (active.length === 0) {
-        container.innerHTML = "<p style='color:var(--text-secondary); font-size:0.8rem;'>Nenhum pedido em produção.</p>";
+        container.innerHTML = "<p style='opacity:0.5; text-align:center; padding:20px;'>Nenhum pedido em produção.</p>";
         return;
     }
 
     active.forEach(l => {
-        const d = new Date(l.entrega + 'T00:00:00');
-        const diff = Math.ceil((d - new Date()) / (1000 * 60 * 60 * 24));
-        const item = document.createElement('div');
-        item.className = 'timeline-item';
-        item.innerHTML = `<h4>${l.cliente}</h4><p>Entrega em: ${d.toLocaleDateString('pt-BR')} (${diff} dias)</p>`;
-        container.appendChild(item);
+        const diff = Math.ceil((new Date(l.entrega + 'T00:00:00') - new Date()) / (1000 * 60 * 60 * 24));
+        const div = document.createElement('div');
+        div.className = 'timeline-item';
+        div.innerHTML = `
+            <div class="tl-info"><strong>${l.cliente}</strong><br><small>${l.empresa || 'Final: ' + l.entrega}</small></div>
+            <div class="tl-bar-bg"><div class="tl-bar-fill" style="width: ${Math.min(100, Math.max(10, 100 - diff * 10))}%"></div></div>
+            <div class="tl-days">${diff}d</div>
+        `;
+        container.appendChild(div);
     });
 }
 
 // ================================================================================= //
-//                                     CRM LOGIC                                     //
-// ================================================================================= //
-
-function renderCRM() {
-    const kanban = document.getElementById('kanban-view');
-    const table = document.getElementById('table-view');
-    
-    if (kanban.style.display !== 'none') {
-        settings.steps.forEach((step, i) => {
-            const container = document.getElementById(`cards-${i}`);
-            const countEl = document.getElementById(`count-${i}`);
-            if (!container) return;
-            container.innerHTML = "";
-            const filtered = leads.filter(l => l.status == i && l.resultado !== 'Perda');
-            countEl.innerText = filtered.length;
-            
-            filtered.forEach(lead => {
-                const card = document.createElement('div');
-                card.className = 'kanban-card';
-                card.draggable = true;
-                card.onclick = () => editLead(lead.id);
-                card.ondragstart = (e) => e.dataTransfer.setData('leadId', lead.id);
-                card.innerHTML = `<h4>${lead.cliente}</h4><p>${lead.empresa || '-'}</p><div class="card-meta"><span class="price">${formatBRL(lead.valor)}</span><span class="date">${lead.entrega ? new Date(lead.entrega + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</span></div>`;
-                container.appendChild(card);
-            });
-        });
-    } else {
-        const body = document.getElementById('crm-table-body');
-        body.innerHTML = "";
-        leads.filter(l => l.resultado !== 'Perda').forEach(lead => {
-            const row = document.createElement('tr');
-            row.innerHTML = `<td>${lead.cliente}</td><td>${lead.empresa || '-'}</td><td>${settings.steps[lead.status]}</td><td>${formatBRL(lead.valor)}</td><td>${lead.entrega || '-'}</td><td><button class="btn-modern" onclick="editLead('${lead.id}')">EDITAR</button></td>`;
-            body.appendChild(row);
-        });
-    }
-}
-
-function toggleCRMView() {
-    const kanban = document.getElementById('kanban-view');
-    const table = document.getElementById('table-view');
-    if (kanban.style.display === 'none') { kanban.style.display = 'flex'; table.style.display = 'none'; }
-    else { kanban.style.display = 'none'; table.style.display = 'block'; }
-    renderCRM();
-}
-
-function allowDrop(e) { e.preventDefault(); }
-function drop(e, stepIndex) {
-    e.preventDefault();
-    const leadId = e.dataTransfer.getData('leadId');
-    const lead = leads.find(l => l.id == leadId);
-    if (lead) {
-        lead.status = stepIndex;
-        saveLeads();
-        renderCRM();
-        updateDashboard();
-    }
-}
-
-function openLeadModal() {
-    document.getElementById('lead-modal-title').innerText = "NOVO CLIENTE";
-    document.getElementById('m_lead_id').value = "";
-    document.getElementById('m_cliente').value = "";
-    document.getElementById('m_empresa').value = "";
-    document.getElementById('m_valor').value = "";
-    document.getElementById('m_lucro').value = "";
-    document.getElementById('m_entrega').value = "";
-    document.getElementById('m_status').value = 0;
-    document.getElementById('m_origem').value = "WhatsApp";
-    document.getElementById('m_resultado').value = "";
-    document.getElementById('m_impostos').value = 0;
-    document.getElementById('m_cpv').value = 0;
-    
-    document.getElementById('m_intel_impostos').innerText = "R$ 0,00";
-    document.getElementById('m_intel_cpv').innerText = "R$ 0,00";
-    document.getElementById('m_intel_lucro').innerText = "R$ 0,00";
-    
-    document.getElementById('lead-result-actions').style.display = 'none';
-    document.getElementById('btn-delete-lead').style.display = 'none';
-    
-    document.getElementById('modal-overlay').style.display = 'flex';
-    document.getElementById('lead-modal').style.display = 'block';
-}
-
-function editLead(id) {
-    const lead = leads.find(l => l.id == id);
-    if (!lead) return;
-    
-    document.getElementById('lead-modal-title').innerText = "EDITAR CLIENTE";
-    document.getElementById('m_lead_id').value = lead.id;
-    document.getElementById('m_cliente').value = lead.cliente;
-    document.getElementById('m_empresa').value = lead.empresa || "";
-    document.getElementById('m_valor').value = lead.valor;
-    document.getElementById('m_lucro').value = lead.lucro;
-    document.getElementById('m_entrega').value = lead.entrega || "";
-    document.getElementById('m_status').value = lead.status;
-    document.getElementById('m_origem').value = lead.origem;
-    document.getElementById('m_resultado').value = lead.resultado || "";
-    document.getElementById('m_impostos').value = lead.impostos || 0;
-    document.getElementById('m_cpv').value = lead.cpv || 0;
-
-    document.getElementById('m_intel_impostos').innerText = formatBRL(lead.impostos);
-    document.getElementById('m_intel_cpv').innerText = formatBRL(lead.cpv);
-    document.getElementById('m_intel_lucro').innerText = formatBRL(lead.lucro);
-
-    document.getElementById('lead-result-actions').style.display = 'block';
-    document.getElementById('btn-delete-lead').style.display = 'block';
-    
-    // Highlight active result
-    document.getElementById('btn-venda').className = lead.resultado === 'Venda' ? 'btn-modern btn-success' : 'btn-modern';
-    document.getElementById('btn-perda').className = lead.resultado === 'Perda' ? 'btn-modern btn-danger' : 'btn-modern';
-
-    document.getElementById('modal-overlay').style.display = 'flex';
-    document.getElementById('lead-modal').style.display = 'block';
-}
-
-function setResult(res) {
-    document.getElementById('m_resultado').value = res;
-    document.getElementById('btn-venda').className = res === 'Venda' ? 'btn-modern btn-success' : 'btn-modern';
-    document.getElementById('btn-perda').className = res === 'Perda' ? 'btn-modern btn-danger' : 'btn-modern';
-}
-
-function saveLead() {
-    const id = document.getElementById('m_lead_id').value;
-    const data = {
-        id: id || Date.now().toString(),
-        cliente: document.getElementById('m_cliente').value,
-        empresa: document.getElementById('m_empresa').value,
-        valor: parseFloat(document.getElementById('m_valor').value) || 0,
-        lucro: parseFloat(document.getElementById('m_lucro').value) || 0,
-        entrega: document.getElementById('m_entrega').value,
-        status: parseInt(document.getElementById('m_status').value),
-        origem: document.getElementById('m_origem').value,
-        resultado: document.getElementById('m_resultado').value,
-        impostos: parseFloat(document.getElementById('m_impostos').value) || 0,
-        cpv: parseFloat(document.getElementById('m_cpv').value) || 0
-    };
-    
-    if (!data.cliente) return alert("Nome obrigatório!");
-    
-    if (id) {
-        const idx = leads.findIndex(l => l.id == id);
-        leads[idx] = data;
-    } else {
-        leads.push(data);
-    }
-    
-    saveLeads();
-    closeAllModals();
-    renderCRM();
-    updateDashboard();
-}
-
-function deleteLead() {
-    const id = document.getElementById('m_lead_id').value;
-    if (confirm("Excluir este lead permanentemente?")) {
-        leads = leads.filter(l => l.id != id);
-        saveLeads();
-        closeAllModals();
-        renderCRM();
-        updateDashboard();
-    }
-}
-
-function saveLeads() { localStorage.setItem('santo_leads', JSON.stringify(leads)); }
-
-// ================================================================================= //
-//                                CALCULADORA LOGIC                                  //
+//                                     CALCULADORA                                   //
 // ================================================================================= //
 
 function updateLeadSelect() {
     const select = document.getElementById('g_vincular_lead');
     if (!select) return;
     select.innerHTML = '<option value="">-- Criar Novo Lead --</option>';
-    leads.filter(l => l.resultado !== 'Perda' && l.status < 4).forEach(l => {
+    leads.filter(l => l.status < 4 && l.resultado !== 'Perda').forEach(l => {
         const opt = document.createElement('option');
         opt.value = l.id;
-        opt.innerText = `${l.cliente} (${l.empresa || 'Sem empresa'})`;
+        opt.innerText = `${l.cliente} (${l.empresa || 'S/E'})`;
         select.appendChild(opt);
     });
 }
@@ -469,7 +306,7 @@ function loadLeadDataIntoCalc() {
 
 function addItem() {
     const id = Date.now();
-    items.push({ id, nome: "", qtd: 1, mat: 0, arte: 0, setup: 0, grav: 0 });
+    items.push({ id, nome: "", arte: 0, setup: 0, grav: 0, mat_custo: 0, mat_rend: 1, qtd: 1 });
     renderItems();
 }
 
@@ -478,18 +315,21 @@ function renderItems() {
     container.innerHTML = "";
     items.forEach(item => {
         const div = document.createElement('div');
-        div.className = 'item-row';
+        div.className = 'item-card-calc';
         div.innerHTML = `
-            <div class="item-grid">
+            <div class="item-header-calc">
                 <input type="text" placeholder="Nome do Item" value="${item.nome}" oninput="updateItem(${item.id}, 'nome', this.value)">
-                <input type="number" placeholder="Qtd" value="${item.qtd}" oninput="updateItem(${item.id}, 'qtd', this.value)">
-                <input type="number" placeholder="Material R$" value="${item.mat}" oninput="updateItem(${item.id}, 'mat', this.value)">
-                <button class="btn-modern btn-danger" onclick="removeItem(${item.id})"><i class="fa-solid fa-trash"></i></button>
+                <button class="btn-icon-danger" onclick="removeItem(${item.id})"><i class="fa-solid fa-trash"></i></button>
             </div>
-            <div class="item-times">
+            <div class="field-row">
                 <div class="field-group"><label>Arte (min)</label><input type="number" value="${item.arte}" oninput="updateItem(${item.id}, 'arte', this.value)"></div>
                 <div class="field-group"><label>Setup (min)</label><input type="number" value="${item.setup}" oninput="updateItem(${item.id}, 'setup', this.value)"></div>
-                <div class="field-group"><label>Corte/Grav (min)</label><input type="number" value="${item.grav}" oninput="updateItem(${item.id}, 'grav', this.value)"></div>
+                <div class="field-group"><label>Corte (min)</label><input type="number" value="${item.grav}" oninput="updateItem(${item.id}, 'grav', this.value)"></div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Custo Placa (R$)</label><input type="number" value="${item.mat_custo}" oninput="updateItem(${item.id}, 'mat_custo', this.value)"></div>
+                <div class="field-group"><label>Rendimento (un)</label><input type="number" value="${item.mat_rend}" oninput="updateItem(${item.id}, 'mat_rend', this.value)"></div>
+                <div class="field-group"><label>Qtd Pedido</label><input type="number" value="${item.qtd}" oninput="updateItem(${item.id}, 'qtd', this.value)"></div>
             </div>
         `;
         container.appendChild(div);
@@ -506,49 +346,82 @@ function removeItem(id) { items = items.filter(i => i.id !== id); renderItems();
 
 function calc() {
     const vHora = parseFloat(document.getElementById('g_valor_hora').value) || 0;
+    const markup = parseFloat(document.getElementById('g_markup').value) || 2.5;
     const impPorc = (parseFloat(document.getElementById('g_imposto').value) || 0) / 100;
     const taxaPorc = (parseFloat(document.getElementById('g_cartao').value) || 0) / 100;
     const fCli = parseFloat(document.getElementById('g_frete_cliente').value) || 0;
     const descPorc = (parseFloat(document.getElementById('g_desconto').value) || 0) / 100;
 
     const vMin = vHora / 60;
-    let totalCustoProducao = 0;
-    let totalPrecoBase = 0;
+    let totalCustoTempo = 0;
+    let totalCustoMaterial = 0;
+    let totalMinutos = 0;
+    let totalPrecoItens = 0;
+
     const body = document.getElementById('card-body');
     body.innerHTML = "";
 
     items.forEach(item => {
-        const custoItem = ((item.arte + item.setup + item.grav) * vMin + item.mat) * item.qtd;
-        const precoItem = custoItem * 2.5; 
-        totalCustoProducao += custoItem;
-        totalPrecoBase += precoItem;
+        const minPorItem = (item.arte + item.setup + item.grav);
+        const minTotalItem = minPorItem * item.qtd;
+        const custoTempoItem = minTotalItem * vMin;
+        
+        // Lógica de Rendimento Industrial
+        const rendimento = item.mat_rend || 1;
+        const placasNecessarias = Math.ceil(item.qtd / rendimento);
+        const custoMatTotalItem = placasNecessarias * item.mat_custo;
+        
+        const custoTotalItem = custoTempoItem + custoMatTotalItem;
+        const precoVendaItem = custoTotalItem * markup;
+
+        totalCustoTempo += custoTempoItem;
+        totalCustoMaterial += custoMatTotalItem;
+        totalMinutos += minTotalItem;
+        totalPrecoItens += precoVendaItem;
+
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${item.qtd}x</td><td>${item.nome || 'Item'}</td><td>${formatBRL(precoItem)}</td>`;
+        row.innerHTML = `<td>${item.qtd}x</td><td>${item.nome || 'Item'}</td><td>${formatBRL(precoVendaItem)}</td>`;
         body.appendChild(row);
     });
 
-    let totalFinal = (totalPrecoBase + fCli) * (1 - descPorc);
+    let totalFinal = (totalPrecoItens + fCli) * (1 - descPorc);
     totalFinal = totalFinal / (1 - impPorc - taxaPorc);
 
     const impostosTotais = totalFinal * (impPorc + taxaPorc);
-    const lucroReal = totalFinal - totalCustoProducao - impostosTotais;
+    const lucroReal = totalFinal - (totalCustoTempo + totalCustoMaterial) - impostosTotais;
 
+    // Atualizar Orçamento Visual
     document.getElementById('card_total').innerText = formatBRL(totalFinal);
     document.getElementById('display_nome_cliente').innerText = document.getElementById('g_cliente').value || "Cliente não informado";
     document.getElementById('display_empresa_cliente').innerText = document.getElementById('g_empresa_calc').value;
     const data = document.getElementById('g_data_proposta').value;
     document.getElementById('display_data_proposta').innerText = data ? new Date(data + 'T00:00:00').toLocaleDateString('pt-BR') : "";
+    
+    // WhatsApp Link
+    const wa = document.getElementById('g_whatsapp').value.replace(/\D/g, '');
+    const waLink = document.getElementById('display_whatsapp_link');
+    if (wa) {
+        waLink.innerHTML = `<a href="https://wa.me/55${wa}" target="_blank" style="color:var(--primary); text-decoration:none;"><i class="fa-brands fa-whatsapp"></i> WhatsApp: ${wa}</a>`;
+    } else {
+        waLink.innerHTML = "";
+    }
+
+    // Atualizar KPIs de Produção
+    document.getElementById('intel-minutos').innerText = totalMinutos.toFixed(0);
+    document.getElementById('intel-custo-tempo').innerText = formatBRL(totalCustoTempo);
+    document.getElementById('intel-custo-mat').innerText = formatBRL(totalCustoMaterial);
+    document.getElementById('intel-custo-geral').innerText = formatBRL(totalCustoTempo + totalCustoMaterial);
 
     // Atualizar Inteligência de Custos
     document.getElementById('intel-impostos').innerText = formatBRL(impostosTotais);
-    document.getElementById('intel-cpv').innerText = formatBRL(totalCustoProducao);
+    document.getElementById('intel-cpv').innerText = formatBRL(totalCustoTempo + totalCustoMaterial);
     document.getElementById('intel-lucro').innerText = formatBRL(lucroReal);
 
     window.lastCalc = {
         total: totalFinal,
         lucro: lucroReal,
         impostos: impostosTotais,
-        cpv: totalCustoProducao
+        cpv: totalCustoTempo + totalCustoMaterial
     };
 }
 
@@ -588,10 +461,16 @@ function sendToCRM() {
 function copyWA() {
     const total = document.getElementById('card_total').innerText;
     const cliente = document.getElementById('g_cliente').value;
+    const wa = document.getElementById('g_whatsapp').value.replace(/\D/g, '');
     let msg = `Olá ${cliente}! Segue orçamento da Santo Laser:\n\n`;
     items.forEach(i => msg += `• ${i.qtd}x ${i.nome}\n`);
     msg += `\n*Total Final: ${total}*\n\nQualquer dúvida, estou à disposição!`;
-    navigator.clipboard.writeText(msg).then(() => alert("Copiado!"));
+    
+    if (wa) {
+        window.open(`https://wa.me/55${wa}?text=${encodeURIComponent(msg)}`, '_blank');
+    } else {
+        navigator.clipboard.writeText(msg).then(() => alert("Texto copiado para o clipboard!"));
+    }
 }
 
 // ================================================================================= //
@@ -646,6 +525,7 @@ function renderFinance() {
     document.getElementById('fin-entradas').innerText = formatBRL(e);
     document.getElementById('fin-saidas').innerText = formatBRL(s);
     document.getElementById('fin-saldo').innerText = formatBRL(initialBalance + e - s);
+    document.getElementById('fin-resultado').innerText = formatBRL(e - s);
     document.getElementById('fin-reserva').innerText = formatBRL(res);
     document.getElementById('fin-impostos').innerText = formatBRL(imp);
     document.getElementById('fin-lucro').innerText = formatBRL(luc);
@@ -658,6 +538,15 @@ function openFinanceModal(tipo) {
     document.getElementById('fin-modal-title').innerText = `NOVA ${tipo.toUpperCase()}`;
     document.getElementById('f_desc').value = ""; document.getElementById('f_valor').value = "";
     document.getElementById('f_data').value = new Date().toISOString().split('T')[0];
+    
+    const catSelect = document.getElementById('f_cat_select');
+    catSelect.innerHTML = "";
+    settings.categories.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c; opt.innerText = c;
+        catSelect.appendChild(opt);
+    });
+
     document.getElementById('modal-overlay').style.display = 'flex';
     document.getElementById('finance-modal').style.display = 'block';
 }
@@ -679,8 +568,8 @@ function clearFinanceFilters() { document.getElementById('filter-start').value =
 function runSimulator() {
     let meta = 0;
     settings.simLabels.forEach((label, i) => {
-        const val = parseFloat(document.getElementById(`sim-val-${i}`).value) || 0;
-        meta += val;
+        const el = document.getElementById(`sim-val-${i}`);
+        if (el) meta += parseFloat(el.value) || 0;
     });
     document.getElementById('sim-meta-total').innerText = formatBRL(meta);
     
@@ -693,10 +582,12 @@ function runSimulator() {
         row.innerHTML = `<td><input type="text" value="${item.nome}" onchange="updateSimItem(${item.id}, 'nome', this.value)"></td><td><input type="number" value="${item.preco}" onchange="updateSimItem(${item.id}, 'preco', this.value)"></td><td><input type="number" value="${item.margem}" onchange="updateSimItem(${item.id}, 'margem', this.value)">%</td><td><input type="number" value="${item.atual}" onchange="updateSimItem(${item.id}, 'atual', this.value)"></td><td><strong>${nec}</strong></td><td><button class="btn-modern btn-danger" onclick="removeSimItem(${item.id})"><i class="fa-solid fa-trash"></i></button></td>`;
         body.appendChild(row);
     });
+    localStorage.setItem('santo_sim_items', JSON.stringify(simItems));
 }
 
 function renderSimInputs() {
     const container = document.getElementById('sim-dynamic-labels');
+    if (!container) return;
     container.innerHTML = "";
     settings.simLabels.forEach((label, i) => {
         const div = document.createElement('div');
@@ -727,103 +618,173 @@ function renderStock() {
     localStorage.setItem('santo_stock_items', JSON.stringify(stockItems));
 }
 
-function openStockModal() { document.getElementById('s_item_id').value = ""; document.getElementById('s_nome').value = ""; document.getElementById('s_cat').value = ""; document.getElementById('s_valor').value = ""; document.getElementById('s_qtd').value = ""; document.getElementById('s_min').value = ""; document.getElementById('modal-overlay').style.display = 'flex'; document.getElementById('stock-modal').style.display = 'block'; }
-function editStockItem(id) { const item = stockItems.find(i => i.id == id); if (!item) return; document.getElementById('s_item_id').value = item.id; document.getElementById('s_nome').value = item.nome; document.getElementById('s_cat').value = item.cat; document.getElementById('s_valor').value = item.valor; document.getElementById('s_qtd').value = item.qtd; document.getElementById('s_min').value = item.min; document.getElementById('modal-overlay').style.display = 'flex'; document.getElementById('stock-modal').style.display = 'block'; }
+function openStockModal() {
+    document.getElementById('s_id').value = ""; document.getElementById('s_nome').value = ""; document.getElementById('s_cat').value = ""; document.getElementById('s_qtd').value = ""; document.getElementById('s_min').value = ""; document.getElementById('s_valor').value = "";
+    document.getElementById('modal-overlay').style.display = 'flex'; document.getElementById('stock-modal').style.display = 'block';
+}
+
 function saveStockItem() {
-    const id = document.getElementById('s_item_id').value;
-    const data = { id: id || Date.now().toString(), nome: document.getElementById('s_nome').value, cat: document.getElementById('s_cat').value, valor: parseFloat(document.getElementById('s_valor').value) || 0, qtd: parseInt(document.getElementById('s_qtd').value) || 0, min: parseInt(document.getElementById('s_min').value) || 0 };
-    if (id) { const idx = stockItems.findIndex(s => s.id == id); stockItems[idx] = data; } else { stockItems.push(data); }
+    const id = document.getElementById('s_id').value;
+    const item = { id: id || Date.now(), nome: document.getElementById('s_nome').value, cat: document.getElementById('s_cat').value, qtd: parseFloat(document.getElementById('s_qtd').value) || 0, min: parseFloat(document.getElementById('s_min').value) || 0, valor: parseFloat(document.getElementById('s_valor').value) || 0 };
+    if (id) { const idx = stockItems.findIndex(i => i.id == id); stockItems[idx] = item; } else { stockItems.push(item); }
     renderStock(); closeAllModals();
 }
-function removeStockItem(id) { if (confirm("Excluir?")) { stockItems = stockItems.filter(s => s.id != id); renderStock(); } }
+
+function editStockItem(id) {
+    const item = stockItems.find(i => i.id == id);
+    document.getElementById('s_id').value = item.id; document.getElementById('s_nome').value = item.nome; document.getElementById('s_cat').value = item.cat; document.getElementById('s_qtd').value = item.qtd; document.getElementById('s_min').value = item.min; document.getElementById('s_valor').value = item.valor;
+    document.getElementById('modal-overlay').style.display = 'flex'; document.getElementById('stock-modal').style.display = 'block';
+}
+
+function removeStockItem(id) { if (confirm("Excluir item?")) { stockItems = stockItems.filter(i => i.id !== id); renderStock(); } }
+
+// ================================================================================= //
+//                                     CRM                                           //
+// ================================================================================= //
+
+function renderCRM() {
+    settings.steps.forEach((step, i) => {
+        const cardsCont = document.getElementById(`cards-${i}`);
+        if (!cardsCont) return;
+        cardsCont.innerHTML = "";
+        const stepLeads = leads.filter(l => l.status == i && l.resultado !== 'Perda');
+        document.getElementById(`count-${i}`).innerText = stepLeads.length;
+        
+        stepLeads.forEach(l => {
+            const card = document.createElement('div');
+            card.className = 'kanban-card';
+            card.draggable = true;
+            card.ondragstart = (e) => e.dataTransfer.setData('text', l.id);
+            card.onclick = () => editLead(l.id);
+            card.innerHTML = `<strong>${l.cliente}</strong><br><small>${l.empresa || '-'}</small><div class="card-val">${formatBRL(l.valor)}</div>`;
+            cardsCont.appendChild(card);
+        });
+    });
+    saveLeads();
+}
+
+function allowDrop(ev) { ev.preventDefault(); }
+function drop(ev, status) {
+    ev.preventDefault();
+    const id = ev.dataTransfer.getData('text');
+    const lead = leads.find(l => l.id == id);
+    if (lead) { lead.status = status; renderCRM(); updateDashboard(); }
+}
+
+function openLeadModal() {
+    document.getElementById('l_id').value = ""; document.getElementById('l_cliente').value = ""; document.getElementById('l_empresa').value = ""; document.getElementById('l_valor').value = ""; document.getElementById('l_entrega').value = "";
+    document.getElementById('lead-modal-title').innerText = "NOVO CLIENTE";
+    document.getElementById('lead-intel-box').style.display = 'none';
+    const statusSel = document.getElementById('l_status');
+    statusSel.innerHTML = "";
+    settings.steps.forEach((s, i) => { const opt = document.createElement('option'); opt.value = i; opt.innerText = s; statusSel.appendChild(opt); });
+    document.getElementById('modal-overlay').style.display = 'flex'; document.getElementById('lead-modal').style.display = 'block';
+}
+
+function editLead(id) {
+    const lead = leads.find(l => l.id == id);
+    document.getElementById('l_id').value = lead.id; document.getElementById('l_cliente').value = lead.cliente; document.getElementById('l_empresa').value = lead.empresa || ""; document.getElementById('l_valor').value = lead.valor; document.getElementById('l_entrega').value = lead.entrega || "";
+    document.getElementById('l_origem').value = lead.origem || "WhatsApp";
+    document.getElementById('lead-modal-title').innerText = "EDITAR CLIENTE";
+    
+    const statusSel = document.getElementById('l_status');
+    statusSel.innerHTML = "";
+    settings.steps.forEach((s, i) => { const opt = document.createElement('option'); opt.value = i; opt.innerText = s; if (i == lead.status) opt.selected = true; statusSel.appendChild(opt); });
+    
+    if (lead.cpv) {
+        document.getElementById('lead-intel-box').style.display = 'block';
+        document.getElementById('l_intel_impostos').innerText = formatBRL(lead.impostos);
+        document.getElementById('l_intel_cpv').innerText = formatBRL(lead.cpv);
+        document.getElementById('l_intel_lucro').innerText = formatBRL(lead.lucro);
+    } else {
+        document.getElementById('lead-intel-box').style.display = 'none';
+    }
+    
+    document.getElementById('modal-overlay').style.display = 'flex'; document.getElementById('lead-modal').style.display = 'block';
+}
+
+function saveLead() {
+    const id = document.getElementById('l_id').value;
+    const lead = { id: id || Date.now().toString(), cliente: document.getElementById('l_cliente').value, empresa: document.getElementById('l_empresa').value, valor: parseFloat(document.getElementById('l_valor').value) || 0, entrega: document.getElementById('l_entrega').value, status: parseInt(document.getElementById('l_status').value), origem: document.getElementById('l_origem').value, resultado: 'Venda' };
+    if (id) { const idx = leads.findIndex(l => l.id == id); leads[idx] = { ...leads[idx], ...lead }; } else { leads.push(lead); }
+    renderCRM(); updateDashboard(); closeAllModals();
+}
+
+function setLeadResult(res) {
+    const id = document.getElementById('l_id').value;
+    if (!id) return;
+    const lead = leads.find(l => l.id == id);
+    lead.resultado = res;
+    if (res === 'Venda') lead.status = 4;
+    renderCRM(); updateDashboard(); closeAllModals();
+}
+
+function deleteLead() { if (confirm("Excluir lead?")) { const id = document.getElementById('l_id').value; leads = leads.filter(l => l.id != id); renderCRM(); updateDashboard(); closeAllModals(); } }
+function toggleCRMView() { const k = document.getElementById('kanban-view'), t = document.getElementById('table-view'); if (k.style.display === 'none') { k.style.display = 'flex'; t.style.display = 'none'; } else { k.style.display = 'none'; t.style.display = 'block'; renderCRMTable(); } }
+function renderCRMTable() { const body = document.getElementById('crm-table-body'); body.innerHTML = ""; leads.filter(l => l.resultado !== 'Perda').forEach(l => { const row = document.createElement('tr'); row.innerHTML = `<td>${l.cliente}</td><td>${l.empresa || '-'}</td><td>${settings.steps[l.status]}</td><td>${formatBRL(l.valor)}</td><td>${l.entrega || '-'}</td><td><button class="btn-modern" onclick="editLead('${l.id}')">EDITAR</button></td>`; body.appendChild(row); }); }
 
 // ================================================================================= //
 //                                 CONFIGURAÇÕES                                     //
 // ================================================================================= //
 
 function loadSettingsPage() {
-    const stepsList = document.getElementById('settings-steps-list');
-    stepsList.innerHTML = "";
+    const stepsCont = document.getElementById('settings-crm-steps');
+    stepsCont.innerHTML = "";
     settings.steps.forEach((s, i) => {
-        const div = document.createElement('div');
-        div.className = 'setting-item-row';
-        div.innerHTML = `<input type="text" value="${s}" onchange="updateSetting('steps', ${i}, this.value)">`;
-        stepsList.appendChild(div);
+        const div = document.createElement('div'); div.className = 'setting-item-row';
+        div.innerHTML = `<input type="text" value="${s}" onchange="settings.steps[${i}] = this.value">`;
+        stepsCont.appendChild(div);
     });
 
-    const simList = document.getElementById('settings-sim-labels');
-    simList.innerHTML = "";
-    settings.simLabels.forEach((s, i) => {
-        const div = document.createElement('div');
-        div.className = 'setting-item-row';
-        div.innerHTML = `<input type="text" value="${s}" onchange="updateSetting('simLabels', ${i}, this.value)"><button class="btn-modern btn-danger" onclick="removeSettingItem('simLabels', ${i})"><i class="fa-solid fa-trash"></i></button>`;
-        simList.appendChild(div);
+    const simCont = document.getElementById('settings-sim-labels');
+    simCont.innerHTML = "";
+    settings.simLabels.forEach((l, i) => {
+        const div = document.createElement('div'); div.className = 'setting-item-row';
+        div.innerHTML = `<input type="text" value="${l}" onchange="settings.simLabels[${i}] = this.value"><button class="btn-icon-danger" onclick="removeSimLabel(${i})"><i class="fa-solid fa-trash"></i></button>`;
+        simCont.appendChild(div);
     });
 
-    const catList = document.getElementById('settings-categories-list');
-    catList.innerHTML = "";
-    settings.categories.forEach((s, i) => {
-        const div = document.createElement('div');
-        div.className = 'setting-item-row';
-        div.innerHTML = `<input type="text" value="${s}" onchange="updateSetting('categories', ${i}, this.value)"><button class="btn-modern btn-danger" onclick="removeSettingItem('categories', ${i})"><i class="fa-solid fa-trash"></i></button>`;
-        catList.appendChild(div);
+    const catCont = document.getElementById('settings-finance-cats');
+    catCont.innerHTML = "";
+    settings.categories.forEach((c, i) => {
+        const div = document.createElement('div'); div.className = 'setting-item-row';
+        div.innerHTML = `<input type="text" value="${c}" onchange="settings.categories[${i}] = this.value"><button class="btn-icon-danger" onclick="removeFinanceCat(${i})"><i class="fa-solid fa-trash"></i></button>`;
+        catCont.appendChild(div);
     });
 }
 
-function updateSetting(key, index, val) { settings[key][index] = val; saveSettings(); }
-function addSettingItem(key) { settings[key].push("Novo Item"); saveSettings(); loadSettingsPage(); }
-function removeSettingItem(key, index) { settings[key].splice(index, 1); saveSettings(); loadSettingsPage(); }
-function saveSettings() { localStorage.setItem('santo_settings', JSON.stringify(settings)); applySettings(); }
+function addSimLabel() { settings.simLabels.push("Novo Custo"); loadSettingsPage(); }
+function removeSimLabel(i) { settings.simLabels.splice(i, 1); loadSettingsPage(); }
+function addFinanceCat() { settings.categories.push("Nova Categoria"); loadSettingsPage(); }
+function removeFinanceCat(i) { settings.categories.splice(i, 1); loadSettingsPage(); }
+
+function saveSettings() {
+    localStorage.setItem('santo_settings', JSON.stringify(settings));
+    applySettings();
+    alert("Configurações salvas!");
+}
 
 function applySettings() {
-    settings.steps.forEach((s, i) => {
-        const el = document.getElementById(`label-step-${i+1}`);
-        if (el) el.innerText = s;
-        const opt = document.getElementById(`opt-step-${i+1}`);
-        if (opt) opt.innerText = s;
-    });
-    
-    const fCat = document.getElementById('f_cat_select');
-    if (fCat) {
-        fCat.innerHTML = "";
-        settings.categories.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c; opt.innerText = c;
-            fCat.appendChild(opt);
-        });
-    }
-
-    const filterCat = document.getElementById('filter-cat');
-    if (filterCat) {
-        filterCat.innerHTML = '<option value="">Todas</option>';
-        settings.categories.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c; opt.innerText = c;
-            filterCat.appendChild(opt);
-        });
-    }
-    
-    renderSimInputs();
+    document.getElementById('filter-cat').innerHTML = '<option value="">Todas</option>' + settings.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+    renderCRM();
 }
 
-function resetSystem() { if (confirm("ATENÇÃO: Isso apagará TODOS os dados. Deseja continuar?")) { localStorage.clear(); location.reload(); } }
+// ================================================================================= //
+//                                     UTILITÁRIOS                                   //
+// ================================================================================= //
 
-// ================================================================================= //
-//                                     BACKUP                                        //
-// ================================================================================= //
+function saveLeads() { localStorage.setItem('santo_leads', JSON.stringify(leads)); }
 
 function exportToExcel() {
-    let csv = "DATA;DESCRIÇÃO;TIPO;CATEGORIA;VALOR;IMPOSTOS;LUCRO\n";
+    let csv = "DATA;DESCRIÇÃO;TIPO;CATEGORIA;VALOR\n";
     const manual = transactions;
-    const auto = leads.filter(l => l.status == 4 && l.resultado === 'Venda').map(l => ({ 
-        data: l.entrega, desc: `VENDA: ${l.cliente}`, tipo: 'Entrada', cat: 'Vendas CRM', valor: l.valor, impostos: l.impostos, lucro: l.lucro 
-    }));
+    const auto = leads.filter(l => l.status == 4 && l.resultado === 'Venda').map(l => ({ data: l.entrega || "", desc: `VENDA: ${l.cliente}`, tipo: 'Entrada', cat: 'Vendas CRM', valor: l.valor }));
     [...manual, ...auto].forEach(t => {
-        csv += `${t.data};${t.desc};${t.tipo};${t.cat};${t.valor};${t.impostos||0};${t.lucro||0}\n`;
+        csv += `${t.data};${t.desc};${t.tipo};${t.cat};${t.valor.toString().replace('.', ',')}\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", "santo_laser_financeiro.csv");
+    link.download = "santo_laser_financeiro.csv";
     link.click();
 }
