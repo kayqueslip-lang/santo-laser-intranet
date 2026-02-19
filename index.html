@@ -3,452 +3,521 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Santo Laser - BI & ERP</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Santo Laser - Intranet Master</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <aside class="sidebar">
+    <nav class="sidebar">
         <div class="logo-container">
-            <div class="logo-circle">
-                <img id="main-logo-img" src="" alt="Santo Laser Logo" class="main-logo">
+            <div class="logo-circle" id="logo-circle-container">
+                <!-- Logo Base64 será inserida aqui via JS -->
             </div>
             <h1 class="sidebar-title">SANTO LASER</h1>
         </div>
+
         <div class="search-box">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="global-search" placeholder="Buscar cliente..." oninput="globalSearch()">
+            <i class="fas fa-search"></i>
+            <input type="text" id="global-search" placeholder="Buscar cliente..." oninput="globalSearch(this.value)">
         </div>
-        <nav>
-            <a href="#" class="nav-item active" onclick="showSection('dashboard')"><i class="fa-solid fa-chart-line"></i> DASHBOARD</a>
-            <a href="#" class="nav-item" onclick="showSection('crm')"><i class="fa-solid fa-users"></i> CRM</a>
-            <a href="#" class="nav-item" onclick="showSection('calculator')"><i class="fa-solid fa-calculator"></i> CALCULADORA OS</a>
-            <a href="#" class="nav-item" onclick="showSection('cashflow')"><i class="fa-solid fa-money-bill-transfer"></i> FLUXO DE CAIXA</a>
-            <a href="#" class="nav-item" onclick="showSection('dre')"><i class="fa-solid fa-file-invoice-dollar"></i> DRE</a>
-            <a href="#" class="nav-item" onclick="showSection('simulator')"><i class="fa-solid fa-bullseye"></i> SIMULADOR METAS</a>
-            <a href="#" class="nav-item" onclick="showSection('stock')"><i class="fa-solid fa-boxes-stacked"></i> ESTOQUE</a>
-            <a href="#" class="nav-item" onclick="showSection('settings')"><i class="fa-solid fa-gear"></i> CONFIGURAÇÕES</a>
-        </nav>
+
+        <ul class="nav-links">
+            <li class="nav-item active" data-section="dashboard"><i class="fas fa-chart-line"></i> DASHBOARD</li>
+            <li class="nav-item" data-section="crm"><i class="fas fa-users"></i> CRM</li>
+            <li class="nav-item" data-section="calculator"><i class="fas fa-calculator"></i> CALCULADORA OS</li>
+            <li class="nav-item" data-section="cashflow"><i class="fas fa-money-bill-wave"></i> FLUXO DE CAIXA</li>
+            <li class="nav-item" data-section="dre"><i class="fas fa-file-invoice-dollar"></i> DRE</li>
+            <li class="nav-item" data-section="goals"><i class="fas fa-bullseye"></i> SIMULADOR METAS</li>
+            <li class="nav-item" data-section="inventory"><i class="fas fa-boxes"></i> ESTOQUE</li>
+            <li class="nav-item" data-section="settings"><i class="fas fa-cog"></i> CONFIGURAÇÕES</li>
+        </ul>
+
         <div class="sidebar-footer">
-            <button class="btn-modern" style="width:100%; margin-bottom:10px;" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> EXPORTAR EXCEL</button>
-            <div class="theme-switch">
-                <button id="theme-toggle" class="btn-theme" onclick="toggleTheme()">
-                    <i class="fa-solid fa-moon"></i> <span>MODO ESCURO</span>
-                </button>
-            </div>
+            <button class="btn-modern btn-primary" id="theme-toggle" style="width: 100%; margin-bottom: 10px;">
+                <i class="fas fa-adjust"></i> ALTERAR TEMA
+            </button>
+            <button class="btn-modern btn-success" onclick="exportToExcel()" style="width: 100%;">
+                <i class="fas fa-file-excel"></i> EXPORTAR EXCEL
+            </button>
         </div>
-    </aside>
+    </nav>
 
     <main class="main-content">
         <!-- DASHBOARD -->
-        <div id="dashboard-content" class="content-section active">
+        <section id="dashboard" class="content-section active">
             <header>
-                <h2>INTELIGÊNCIA DE NEGÓCIO</h2>
-                <div class="filter-bar">
+                <h2>DASHBOARD DE SAÚDE</h2>
+                <div class="header-filters">
                     <input type="month" id="dash-month-filter" onchange="updateDashboard()">
                 </div>
             </header>
             <div class="kpi-grid">
                 <div class="kpi-card highlight-neon">
-                    <small>Faturamento (Vendas)</small>
-                    <span class="value" id="dash-faturamento">R$ 0,00</span>
-                    <div class="kpi-trend" id="dash-faturamento-trend">Previsão: R$ 0,00</div>
+                    <small>FATURAMENTO (VENDAS PAGAS)</small>
+                    <span class="value" id="dash-revenue">R$ 0,00</span>
                 </div>
                 <div class="kpi-card">
-                    <small>Lucro Líquido Real</small>
-                    <span class="value" id="dash-lucro-real">R$ 0,00</span>
-                    <div class="kpi-trend" id="dash-lucro-margem">Margem: 0%</div>
+                    <small>LUCRO LÍQUIDO REAL</small>
+                    <span class="value" id="dash-profit">R$ 0,00</span>
                 </div>
                 <div class="kpi-card">
-                    <small>Pipeline (Oportunidades)</small>
-                    <span class="value" id="dash-pipeline">R$ 0,00</span>
-                    <div class="kpi-trend">Em negociação</div>
+                    <small>PEDIDOS ATIVOS (PROD/APROV)</small>
+                    <span class="value" id="dash-active-orders">0</span>
                 </div>
                 <div class="kpi-card">
-                    <small>Pedidos em Produção</small>
-                    <span class="value" id="dash-pedidos">0</span>
-                    <div class="kpi-trend" id="dash-pedidos-valor">R$ 0,00</div>
+                    <small>CONVERSÃO DE LEADS</small>
+                    <span class="value" id="dash-conversion">0%</span>
                 </div>
             </div>
             <div class="charts-row">
                 <div class="chart-container">
-                    <h3>Fluxo de Caixa Mensal</h3>
-                    <div class="chart-wrapper"><canvas id="chart-performance"></canvas></div>
+                    <h3>Tendência Financeira</h3>
+                    <div class="chart-wrapper"><canvas id="trendChart"></canvas></div>
                 </div>
                 <div class="chart-container">
-                    <h3>Previsibilidade de Receita</h3>
-                    <div class="chart-wrapper"><canvas id="chart-previsibilidade"></canvas></div>
+                    <h3>Origem dos Leads</h3>
+                    <div class="chart-wrapper"><canvas id="originChart"></canvas></div>
                 </div>
             </div>
             <div class="dashboard-bottom-row">
                 <div class="chart-container timeline-widget">
                     <h3>Cronograma de Entregas</h3>
-                    <div id="timeline-wrapper" class="timeline-container"></div>
+                    <div id="timeline-list" class="timeline-container">
+                        <!-- Timeline via JS -->
+                    </div>
                 </div>
                 <div class="chart-container">
-                    <h3>Origem de Leads</h3>
-                    <div class="chart-wrapper"><canvas id="chart-origem"></canvas></div>
+                    <h3>Lucro por Categoria</h3>
+                    <div class="chart-wrapper"><canvas id="categoryChart"></canvas></div>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- CRM -->
-        <div id="crm-content" class="content-section">
-            <div class="crm-header">
-                <h2>GESTÃO DE OPORTUNIDADES</h2>
-                <div class="crm-controls">
-                    <button class="btn-modern btn-primary" onclick="openLeadModal()">+ NOVO CLIENTE</button>
-                    <button class="btn-modern" onclick="toggleCRMView()"><i class="fa-solid fa-table-list"></i> ALTERNAR VISÃO</button>
+        <section id="crm" class="content-section">
+            <header>
+                <h2>CRM - FUNIL DE VENDAS</h2>
+                <div class="header-actions">
+                    <button class="btn-modern btn-primary" onclick="openLeadModal()"><i class="fas fa-plus"></i> NOVO CLIENTE</button>
+                    <button class="btn-modern" onclick="toggleCRMView()"><i class="fas fa-table"></i> ALTERNAR VISÃO</button>
                 </div>
-            </div>
+            </header>
             <div id="kanban-view" class="kanban-container">
-                <div class="kanban-column" id="col-0" ondrop="drop(event, 0)" ondragover="allowDrop(event)">
-                    <div class="column-header"><span id="label-step-1">PROPOSTA</span> <span class="count" id="count-0">0</span></div>
-                    <div class="kanban-cards" id="cards-0"></div>
-                </div>
-                <div class="kanban-column" id="col-1" ondrop="drop(event, 1)" ondragover="allowDrop(event)">
-                    <div class="column-header"><span id="label-step-2">APROVADO</span> <span class="count" id="count-1">0</span></div>
-                    <div class="kanban-cards" id="cards-1"></div>
-                </div>
-                <div class="kanban-column" id="col-2" ondrop="drop(event, 2)" ondragover="allowDrop(event)">
-                    <div class="column-header"><span id="label-step-3">PRODUÇÃO</span> <span class="count" id="count-2">0</span></div>
-                    <div class="kanban-cards" id="cards-2"></div>
-                </div>
-                <div class="kanban-column" id="col-3" ondrop="drop(event, 3)" ondragover="allowDrop(event)">
-                    <div class="column-header"><span id="label-step-4">FINALIZADO</span> <span class="count" id="count-3">0</span></div>
-                    <div class="kanban-cards" id="cards-3"></div>
-                </div>
-                <div class="kanban-column" id="col-4" ondrop="drop(event, 4)" ondragover="allowDrop(event)">
-                    <div class="column-header"><span id="label-step-5">PAGO</span> <span class="count" id="count-4">0</span></div>
-                    <div class="kanban-cards" id="cards-4"></div>
-                </div>
+                <!-- Colunas via JS -->
             </div>
-            <div id="table-view" class="table-container" style="display: none;">
+            <div id="table-view" style="display:none;">
                 <table class="modern-table">
-                    <thead><tr><th>CLIENTE</th><th>EMPRESA</th><th>STATUS</th><th>VALOR</th><th>ENTREGA</th><th>AÇÕES</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Empresa</th>
+                            <th>Status</th>
+                            <th>Valor</th>
+                            <th>Entrega</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
                     <tbody id="crm-table-body"></tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
         <!-- CALCULADORA -->
-        <div id="calculator-content" class="content-section">
+        <section id="calculator" class="content-section">
+            <header>
+                <h2>CALCULADORA DE ORÇAMENTOS</h2>
+                <div class="header-actions">
+                    <select id="g_vincular_lead" onchange="loadLeadDataIntoCalc()">
+                        <option value="">-- Criar Novo Lead --</option>
+                    </select>
+                    <button class="btn-modern btn-success" onclick="saveToCRM()"><i class="fas fa-save"></i> SALVAR NO CRM</button>
+                </div>
+            </header>
             <div class="calc-main-layout">
                 <div class="calc-form-side">
-                    <div class="section-header">🔗 Vínculo de Inteligência</div>
-                    <div class="field-group">
-                        <label>Vincular a Lead Existente?</label>
-                        <select id="g_vincular_lead" onchange="loadLeadDataIntoCalc()">
-                            <option value="">-- Criar Novo Lead --</option>
-                        </select>
-                    </div>
-                    <div class="section-header">⚙️ Parâmetros Globais</div>
+                    <div class="section-header">Configurações Globais</div>
                     <div class="field-row">
-                        <div class="field-group"><label>Valor Hora (R$)</label><input type="number" id="g_valor_hora" value="100" oninput="calc()"></div>
-                        <div class="field-group"><label>Markup (x)</label><input type="number" id="g_markup" value="2.5" step="0.1" oninput="calc()"></div>
+                        <div class="field-group">
+                            <label>Valor da Hora (R$)</label>
+                            <input type="number" id="g_valor_hora" value="100" oninput="calc()">
+                        </div>
+                        <div class="field-group">
+                            <label>Imposto (%)</label>
+                            <input type="number" id="g_imposto" value="6" oninput="calc()">
+                        </div>
                     </div>
                     <div class="field-row">
-                        <div class="field-group"><label>Imposto (%)</label><input type="number" id="g_imposto" value="6" oninput="calc()"></div>
-                        <div class="field-group"><label>Taxa Cartão (%)</label><input type="number" id="g_cartao" value="5" oninput="calc()"></div>
-                    </div>
-                    <div class="section-header">👤 Dados do Cliente</div>
-                    <div class="field-group"><label>Nome do Cliente</label><input type="text" id="g_cliente" placeholder="Nome Completo" oninput="calc()"></div>
-                    <div class="field-row">
-                        <div class="field-group"><label>Empresa</label><input type="text" id="g_empresa_calc" placeholder="Opcional" oninput="calc()"></div>
-                        <div class="field-group"><label>WhatsApp</label><input type="text" id="g_whatsapp" placeholder="Ex: 47999999999" oninput="calc()"></div>
-                    </div>
-                    <div class="field-group"><label>Data da Proposta</label><input type="date" id="g_data_proposta" oninput="calc()"></div>
-                    
-                    <div class="section-header">💎 Itens do Orçamento</div>
-                    <div id="items-list"></div>
-                    <button class="btn-modern btn-primary" style="width:100%; margin-top:10px;" onclick="addItem()">+ ADICIONAR ITEM</button>
-                    
-                    <div class="section-header">🚚 Logística e Descontos</div>
-                    <div class="field-row">
-                        <div class="field-group"><label>Frete Cliente (R$)</label><input type="number" id="g_frete_cliente" value="0" oninput="calc()"></div>
-                        <div class="field-group"><label>Desconto (%)</label><input type="number" id="g_desconto" value="0" oninput="calc()"></div>
+                        <div class="field-group">
+                            <label>Taxa Cartão (%)</label>
+                            <input type="number" id="g_cartao" value="5" oninput="calc()">
+                        </div>
+                        <div class="field-group">
+                            <label>Markup Global (x)</label>
+                            <input type="number" id="g_markup" value="2.0" step="0.1" oninput="calc()">
+                        </div>
                     </div>
 
-                    <div class="section-header">📊 Resumo de Produção</div>
-                    <div class="intel-grid">
-                        <div class="intel-item"><span>Minutos Totais:</span> <strong id="intel-minutos">0</strong></div>
-                        <div class="intel-item"><span>Custo de Tempo:</span> <strong id="intel-custo-tempo">R$ 0,00</strong></div>
-                        <div class="intel-item"><span>Custo Material:</span> <strong id="intel-custo-mat">R$ 0,00</strong></div>
-                        <div class="intel-item"><span>Custo Geral:</span> <strong id="intel-custo-geral">R$ 0,00</strong></div>
+                    <div class="section-header">Dados do Cliente</div>
+                    <div class="field-group">
+                        <label>Nome do Cliente</label>
+                        <input type="text" id="g_cliente" placeholder="Nome Completo" oninput="updateQuote()">
+                    </div>
+                    <div class="field-group">
+                        <label>Empresa</label>
+                        <input type="text" id="g_empresa_calc" placeholder="Empresa do Cliente" oninput="updateQuote()">
+                    </div>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Data da Proposta</label>
+                            <input type="date" id="g_data_proposta" oninput="updateQuote()">
+                        </div>
+                        <div class="field-group">
+                            <label>WhatsApp (Ex: 47999999999)</label>
+                            <input type="text" id="g_whatsapp" placeholder="Apenas números" oninput="updateQuote()">
+                        </div>
+                    </div>
+
+                    <div class="section-header">Itens do Orçamento</div>
+                    <div id="items-list"></div>
+                    <button class="btn-modern btn-primary" style="width:100%" onclick="addItem()"><i class="fas fa-plus"></i> ADICIONAR ITEM</button>
+
+                    <div class="section-header">Frete e Desconto</div>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Frete Insumos (R$)</label>
+                            <input type="number" id="g_frete_insumos" value="0" oninput="calc()">
+                        </div>
+                        <div class="field-group">
+                            <label>Frete Cliente (R$)</label>
+                            <input type="number" id="g_frete_cliente" value="0" oninput="calc()">
+                        </div>
+                    </div>
+                    <div class="field-group">
+                        <label>Desconto (%)</label>
+                        <input type="number" id="g_desconto" value="0" oninput="calc()">
+                    </div>
+
+                    <div class="intel-box">
+                        <div class="section-header" style="margin-top:0; border:none;">Inteligência de Custos</div>
+                        <div class="intel-grid">
+                            <div class="intel-item"><span>Tempo Total</span><strong id="res_tempo">0 min</strong></div>
+                            <div class="intel-item"><span>Custo Tempo</span><strong id="res_custo_tempo">R$ 0,00</strong></div>
+                            <div class="intel-item"><span>Custo Material</span><strong id="res_custo_mat">R$ 0,00</strong></div>
+                            <div class="intel-item"><span>Impostos</span><strong id="res_impostos">R$ 0,00</strong></div>
+                            <div class="intel-item"><span>Custo Geral</span><strong id="res_custo_geral">R$ 0,00</strong></div>
+                            <div class="intel-item"><span>Lucro Real</span><strong id="res_lucro_real">R$ 0,00</strong></div>
+                        </div>
+                        <div id="markup-indicator" class="markup-indicator">MARKUP: 0.0x</div>
                     </div>
                 </div>
 
                 <div class="calc-preview-side">
-                    <div class="quote-card-container">
-                        <div class="quote-card" id="quote-card">
-                            <div class="quote-header">
-                                <div class="quote-meta">
-                                    <h2>ORÇAMENTO</h2>
-                                    <p id="display_data_proposta"></p>
-                                </div>
-                                <div class="quote-status">SANTO LASER</div>
+                    <div id="quote-card" class="quote-card">
+                        <div class="quote-header">
+                            <div class="quote-meta">
+                                <h2>ORÇAMENTO</h2>
+                                <p id="q_data">Data: --/--/----</p>
                             </div>
-                            <div class="quote-client-box">
-                                <strong>CLIENTE:</strong> <span id="display_nome_cliente"></span><br>
-                                <span id="display_empresa_cliente" style="font-size: 0.65rem; opacity: 0.8;"></span>
-                            </div>
-                            <table class="quote-table">
-                                <thead><tr><th>QTD</th><th>DESCRIÇÃO</th><th>TOTAL</th></tr></thead>
-                                <tbody id="card-body"></tbody>
-                            </table>
-                            <div class="quote-footer">
-                                <div class="quote-total-row">
-                                    <span>VALOR TOTAL</span>
-                                    <h3 id="card_total">R$ 0,00</h3>
-                                </div>
-                                <div class="quote-disclaimer">
-                                    * Orçamento válido por 7 dias. Pagamento via PIX ou Cartão.<br>
-                                    <span id="display_whatsapp_link"></span><br>
-                                    <span style="font-size: 0.7rem; opacity: 0.6; display: block; margin-top: 10px;">CNPJ: 00.000.000/0001-00</span>
-                                </div>
+                            <div class="quote-company">
+                                <strong>SANTO LASER</strong><br>
+                                <small>Corte e Gravação UV</small>
                             </div>
                         </div>
-                    </div>
-                    <div class="calc-actions">
-                        <button class="btn-modern btn-success" style="flex:1" onclick="sendToCRM()">SALVAR NO CRM & NOTION</button>
-                        <button class="btn-modern" style="flex:1" onclick="copyWA()">COPIAR WHATSAPP</button>
-                    </div>
-                    <div class="intel-box" style="margin-top:20px;">
-                        <h4>Inteligência de Custos</h4>
-                        <div class="intel-grid">
-                            <div class="intel-item"><span>Impostos Totais:</span> <strong id="intel-impostos">R$ 0,00</strong></div>
-                            <div class="intel-item"><span>CPV (Custo):</span> <strong id="intel-cpv">R$ 0,00</strong></div>
-                            <div class="intel-item"><span>Lucro Real Estimado:</span> <strong id="intel-lucro" style="color:var(--success)">R$ 0,00</strong></div>
+                        <div class="quote-client-box">
+                            <strong>Para:</strong> <span id="q_nome">Cliente não informado</span><br>
+                            <strong>Ref:</strong> Proposta de Serviços de Laser
+                        </div>
+                        <table class="quote-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Qtd</th>
+                                    <th>Unitário</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quote-items-body"></tbody>
+                        </table>
+                        <div class="quote-footer">
+                            <div class="quote-total-row">
+                                <span>TOTAL DO INVESTIMENTO</span>
+                                <h3 id="q_total">R$ 0,00</h3>
+                            </div>
+                            <div class="quote-disclaimer">
+                                <p id="q_cnpj">CNPJ: 00.000.000/0001-00</p>
+                                <p id="q_whatsapp_link">WhatsApp: (00) 00000-0000</p>
+                                <br>
+                                <small>Validade da proposta: 7 dias. Condições sujeitas a alteração.</small>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- FLUXO DE CAIXA -->
-        <div id="cashflow-content" class="content-section">
+        <section id="cashflow" class="content-section">
             <header>
                 <h2>FLUXO DE CAIXA</h2>
-                <div class="finance-actions">
-                    <button class="btn-modern btn-primary" onclick="openFinanceModal('Entrada')">+ ENTRADA</button>
-                    <button class="btn-modern btn-danger" onclick="openFinanceModal('Saída')">- SAÍDA</button>
-                    <button class="btn-modern" onclick="openInitialBalanceModal()">AJUSTAR SALDO</button>
-                </div>
-            </header>
-            <div class="kpi-grid">
-                <div class="kpi-card">
-                    <small>Saldo Atual (Conta)</small>
-                    <span class="value" id="fin-saldo">R$ 0,00</span>
-                </div>
-                <div class="kpi-card">
-                    <small>Entradas (Mês)</small>
-                    <span class="value" id="fin-entradas" style="color:var(--success)">R$ 0,00</span>
-                </div>
-                <div class="kpi-card">
-                    <small>Saídas (Mês)</small>
-                    <span class="value" id="fin-saidas" style="color:var(--danger)">R$ 0,00</span>
-                </div>
-                <div class="kpi-card">
-                    <small>Resultado Líquido</small>
-                    <span class="value" id="fin-resultado">R$ 0,00</span>
-                </div>
-            </div>
-            <div class="finance-filters">
-                <div class="field-group"><label>Início</label><input type="date" id="filter-start" onchange="renderFinance()"></div>
-                <div class="field-group"><label>Fim</label><input type="date" id="filter-end" onchange="renderFinance()"></div>
-                <div class="field-group">
-                    <label>Tipo</label>
-                    <select id="filter-type" onchange="renderFinance()">
-                        <option value="">Todos</option>
-                        <option value="Entrada">Entrada</option>
-                        <option value="Saída">Saída</option>
+                <div class="header-filters">
+                    <input type="date" id="flow-start" onchange="renderFinance()">
+                    <span>até</span>
+                    <input type="date" id="flow-end" onchange="renderFinance()">
+                    <select id="flow-type-filter" onchange="renderFinance()">
+                        <option value="">Todos os Tipos</option>
+                        <option value="entrada">Entradas</option>
+                        <option value="saída">Saídas</option>
                     </select>
                 </div>
-                <div class="field-group">
-                    <label>Categoria</label>
-                    <select id="filter-cat" onchange="renderFinance()">
-                        <option value="">Todas</option>
-                    </select>
-                </div>
-                <button class="btn-modern" onclick="clearFinanceFilters()">LIMPAR</button>
-            </div>
-            <div class="table-container">
-                <table class="modern-table">
-                    <thead><tr><th>DATA</th><th>DESCRIÇÃO</th><th>TIPO</th><th>CATEGORIA</th><th>VALOR</th><th>AÇÕES</th></tr></thead>
-                    <tbody id="finance-table-body"></tbody>
-                </table>
-            </div>
-            <div class="finance-splits">
-                <div class="split-card"><span>Reserva Segurança (10%):</span> <strong id="fin-reserva">R$ 0,00</strong></div>
-                <div class="split-card"><span>Provisão Impostos:</span> <strong id="fin-impostos">R$ 0,00</strong></div>
-                <div class="split-card"><span>Lucro Real Acumulado:</span> <strong id="fin-lucro">R$ 0,00</strong></div>
-            </div>
-        </div>
-
-        <!-- DRE -->
-        <div id="dre-content" class="content-section">
-            <header>
-                <h2>DEMONSTRATIVO DE RESULTADOS (DRE)</h2>
-                <div class="filter-bar"><input type="month" id="dre-month-filter" onchange="renderDRE()"></div>
             </header>
-            <div class="table-container">
-                <table class="modern-table dre-table">
-                    <thead><tr><th>DESCRIÇÃO</th><th>VALOR (R$)</th><th>% RECEITA</th></tr></thead>
-                    <tbody>
-                        <tr class="dre-row-main"><td>RECEITA BRUTA (Vendas Pagas)</td><td id="dre-receita-bruta">R$ 0,00</td><td>100%</td></tr>
-                        <tr><td>(-) Impostos e Taxas</td><td id="dre-impostos">R$ 0,00</td><td id="dre-impostos-p">0%</td></tr>
-                        <tr class="dre-row-sub"><td>RECEITA LÍQUIDA</td><td id="dre-receita-liquida">R$ 0,00</td><td id="dre-receita-liquida-p">0%</td></tr>
-                        <tr><td>(-) Custo de Produção (CPV)</td><td id="dre-cpv">R$ 0,00</td><td id="dre-cpv-p">0%</td></tr>
-                        <tr class="dre-row-sub"><td>LUCRO BRUTO</td><td id="dre-lucro-bruto">R$ 0,00</td><td id="dre-lucro-bruto-p">0%</td></tr>
-                        <tr><td>(-) Despesas Operacionais (Saídas)</td><td id="dre-despesas">R$ 0,00</td><td id="dre-despesas-p">0%</td></tr>
-                        <tr class="dre-row-final"><td>RESULTADO LÍQUIDO DO PERÍODO</td><td id="dre-resultado">R$ 0,00</td><td id="dre-resultado-p">0%</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- SIMULADOR METAS -->
-        <div id="simulator-content" class="content-section">
-            <header><h2>SIMULADOR DE METAS FINANCEIRAS</h2></header>
-            <div class="sim-layout">
-                <div class="sim-sidebar">
-                    <h3>🎯 Metas Desejadas</h3>
-                    <div id="sim-dynamic-labels"></div>
-                    <div class="sim-meta-card">
-                        <small>META DE LUCRO TOTAL</small>
-                        <h2 id="sim-meta-total">R$ 0,00</h2>
+            <div class="dual-layout">
+                <div class="form-panel">
+                    <div class="section-header">Nova Transação</div>
+                    <div class="field-group">
+                        <label>Descrição</label>
+                        <input type="text" id="f_desc" placeholder="Ex: Compra de MDF">
                     </div>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label>Valor (R$)</label>
+                            <input type="number" id="f_val">
+                        </div>
+                        <div class="field-group">
+                            <label>Tipo</label>
+                            <select id="f_tipo">
+                                <option value="entrada">Entrada</option>
+                                <option value="saída">Saída</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field-group">
+                        <label>Categoria</label>
+                        <select id="f_cat"></select>
+                    </div>
+                    <div class="field-group">
+                        <label>Data</label>
+                        <input type="date" id="f_data">
+                    </div>
+                    <button class="btn-modern btn-primary" style="width:100%" onclick="addFinance()"><i class="fas fa-plus"></i> ADICIONAR</button>
+                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);">
+                    <button class="btn-modern" style="width:100%" onclick="openBalanceModal()"><i class="fas fa-wallet"></i> AJUSTAR SALDO INICIAL</button>
                 </div>
-                <div class="sim-main">
-                    <h3>📊 Planejamento de Produtos/Serviços</h3>
+                <div class="data-panel">
+                    <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+                        <div class="kpi-card highlight-neon"><small>SALDO ATUAL</small><span class="value" id="f_res_saldo">R$ 0,00</span></div>
+                        <div class="kpi-card"><small>ENTRADAS</small><span class="value" id="f_res_ent">R$ 0,00</span></div>
+                        <div class="kpi-card"><small>SAÍDAS</small><span class="value" id="f_res_sai">R$ 0,00</span></div>
+                    </div>
                     <div class="table-container">
                         <table class="modern-table">
-                            <thead><tr><th>NOME</th><th>PREÇO VENDA</th><th>MARGEM (%)</th><th>VENDAS ATUAIS</th><th>VENDAS NECESSÁRIAS</th><th>AÇÕES</th></tr></thead>
-                            <tbody id="sim-table-body"></tbody>
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th>Categoria</th>
+                                    <th>Tipo</th>
+                                    <th>Valor</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finance-table-body"></tbody>
                         </table>
                     </div>
-                    <button class="btn-modern btn-primary" style="margin-top:20px;" onclick="addSimItem()">+ ADICIONAR PRODUTO</button>
                 </div>
             </div>
-        </div>
+        </section>
+
+        <!-- DRE -->
+        <section id="dre" class="content-section">
+            <header>
+                <h2>DEMONSTRATIVO DE RESULTADO</h2>
+                <div class="header-filters">
+                    <input type="month" id="dre-month-filter" onchange="renderDRE()">
+                </div>
+            </header>
+            <div class="dual-layout">
+                <div class="form-panel">
+                    <div class="kpi-grid" style="grid-template-columns: 1fr;">
+                        <div class="kpi-card highlight-neon"><small>RESULTADO LÍQUIDO</small><span class="value" id="dre-resultado">R$ 0,00</span></div>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Performance Financeira</h3>
+                        <div class="chart-wrapper"><canvas id="chart-performance"></canvas></div>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Previsibilidade</h3>
+                        <div class="chart-wrapper"><canvas id="chart-previsibilidade"></canvas></div>
+                    </div>
+                </div>
+                <div class="data-panel">
+                    <table class="modern-table">
+                        <thead>
+                            <tr><th>Indicador</th><th>Valor</th><th>% sobre Receita Bruta</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Receita Bruta</td><td id="dre-receita-bruta">R$ 0,00</td><td id="dre-receita-bruta-p">100%</td></tr>
+                            <tr><td>(-) Impostos</td><td id="dre-impostos">R$ 0,00</td><td id="dre-impostos-p">0%</td></tr>
+                            <tr><td>= Receita Líquida</td><td id="dre-receita-liquida">R$ 0,00</td><td id="dre-receita-liquida-p">0%</td></tr>
+                            <tr><td>(-) Custo dos Produtos Vendidos (CPV)</td><td id="dre-cpv">R$ 0,00</td><td id="dre-cpv-p">0%</td></tr>
+                            <tr><td>= Lucro Bruto</td><td id="dre-lucro-bruto">R$ 0,00</td><td id="dre-lucro-bruto-p">0%</td></tr>
+                            <tr><td>(-) Despesas Operacionais</td><td id="dre-despesas">R$ 0,00</td><td id="dre-despesas-p">0%</td></tr>
+                            <tr><td>= Resultado Líquido</td><td id="dre-resultado-final">R$ 0,00</td><td id="dre-resultado-final-p">0%</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SIMULADOR DE METAS -->
+        <section id="goals" class="content-section">
+            <header>
+                <h2>SIMULADOR DE METAS</h2>
+                <button class="btn-modern btn-primary" onclick="addSimItem()"><i class="fas fa-plus"></i> ADICIONAR META</button>
+            </header>
+            <div class="dual-layout">
+                <div class="form-panel">
+                    <div class="field-group">
+                        <label>Meta de Faturamento (R$)</label>
+                        <input type="number" id="sim-meta-faturamento" value="10000" oninput="calculateSim()">
+                    </div>
+                    <div class="field-group">
+                        <label>Markup Médio Desejado (x)</label>
+                        <input type="number" id="sim-markup-medio" value="2.5" step="0.1" oninput="calculateSim()">
+                    </div>
+                    <div class="section-header">Custos Fixos e Variáveis</div>
+                    <div id="sim-items-container"></div>
+                    <div class="intel-box">
+                        <div class="section-header" style="margin-top:0; border:none;">Resultados da Simulação</div>
+                        <div class="intel-grid">
+                            <div class="intel-item"><span>Custo Total Projetado</span><strong id="sim-custo-total">R$ 0,00</strong></div>
+                            <div class="intel-item"><span>Lucro Líquido Projetado</span><strong id="sim-lucro-liquido">R$ 0,00</strong></div>
+                            <div class="intel-item"><span>Pedidos Necessários</span><strong id="sim-pedidos-necessarios">0</strong></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="data-panel">
+                    <div class="chart-container">
+                        <h3>Composição de Custos</h3>
+                        <div class="chart-wrapper"><canvas id="chart-sim-custos"></canvas></div>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Projeção de Lucro</h3>
+                        <div class="chart-wrapper"><canvas id="chart-sim-lucro"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <!-- ESTOQUE -->
-        <div id="stock-content" class="content-section">
+        <section id="inventory" class="content-section">
             <header>
                 <h2>CONTROLE DE ESTOQUE</h2>
-                <button class="btn-modern btn-primary" onclick="openStockModal()">+ NOVO ITEM</button>
+                <button class="btn-modern btn-primary" onclick="openStockModal()"><i class="fas fa-plus"></i> NOVO ITEM</button>
             </header>
             <div class="table-container">
                 <table class="modern-table">
-                    <thead><tr><th>ITEM</th><th>CATEGORIA</th><th>QTD ATUAL</th><th>MÍNIMO</th><th>VALOR UNIT.</th><th>VALOR TOTAL</th><th>AÇÕES</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantidade</th>
+                            <th>Unidade</th>
+                            <th>Custo Unitário</th>
+                            <th>Custo Total</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
                     <tbody id="stock-table-body"></tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
         <!-- CONFIGURAÇÕES -->
-        <div id="settings-content" class="content-section">
-            <header><h2>CONFIGURAÇÕES DO SISTEMA</h2></header>
+        <section id="settings" class="content-section">
+            <header>
+                <h2>CONFIGURAÇÕES DO SISTEMA</h2>
+            </header>
             <div class="settings-grid">
                 <div class="settings-card">
-                    <h3>Personalizar Etapas do CRM</h3>
+                    <h3>Etapas do CRM</h3>
                     <div id="settings-crm-steps"></div>
-                </div>
-                <div class="settings-card">
-                    <h3>Rótulos do Simulador</h3>
-                    <div id="settings-sim-labels"></div>
-                    <button class="btn-modern btn-primary" onclick="addSimLabel()">+ NOVO RÓTULO</button>
+                    <div class="setting-item-row">
+                        <input type="text" id="new-crm-step" placeholder="Nova Etapa" class="neon-input">
+                        <button class="btn-modern btn-primary" onclick="addCrmStep()"><i class="fas fa-plus"></i></button>
+                    </div>
                 </div>
                 <div class="settings-card">
                     <h3>Categorias Financeiras</h3>
                     <div id="settings-finance-cats"></div>
-                    <button class="btn-modern btn-primary" onclick="addFinanceCat()">+ NOVA CATEGORIA</button>
+                    <div class="setting-item-row">
+                        <input type="text" id="new-finance-cat" placeholder="Nova Categoria" class="neon-input">
+                        <button class="btn-modern btn-primary" onclick="addFinanceCat()"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="settings-card">
+                    <h3>Configurações da Calculadora</h3>
+                    <div class="field-group">
+                        <label>Valor da Hora Padrão (R$)</label>
+                        <input type="number" id="setting-hora" oninput="updateSetting(\'hora\', this.value)">
+                    </div>
+                    <div class="field-group">
+                        <label>Imposto Padrão (%)</label>
+                        <input type="number" id="setting-imposto" oninput="updateSetting(\'imposto\', this.value)">
+                    </div>
+                    <div class="field-group">
+                        <label>Markup Padrão (x)</label>
+                        <input type="number" id="setting-markup" oninput="updateSetting(\'markup\', this.value)">
+                    </div>
                 </div>
             </div>
-            <button class="btn-modern btn-success" style="margin-top:30px; width:200px;" onclick="saveSettings()">SALVAR CONFIGURAÇÕES</button>
-        </div>
+        </section>
     </main>
 
-    <!-- MODAIS -->
-    <div id="modal-overlay" class="modal-overlay" onclick="closeAllModals()"></div>
+    <!-- Modais -->
+    <div class="modal-overlay" id="modal-overlay"></div>
 
-    <!-- MODAL CRM -->
-    <div id="lead-modal" class="modal-modern">
-        <h3 id="lead-modal-title">NOVO CLIENTE</h3>
-        <input type="hidden" id="l_id">
-        <div class="field-group"><label>Nome do Cliente</label><input type="text" id="l_cliente"></div>
-        <div class="field-group"><label>Empresa</label><input type="text" id="l_empresa"></div>
-        <div class="field-row">
-            <div class="field-group"><label>Valor (R$)</label><input type="number" id="l_valor"></div>
-            <div class="field-group"><label>Data Entrega</label><input type="date" id="l_entrega"></div>
-        </div>
-        <div class="field-row">
-            <div class="field-group">
-                <label>Status</label>
-                <select id="l_status"></select>
-            </div>
-            <div class="field-group">
-                <label>Origem</label>
-                <select id="l_origem">
-                    <option>WhatsApp</option><option>Instagram</option><option>Indicação</option><option>Site</option><option>Outros</option>
-                </select>
-            </div>
-        </div>
-        <div class="intel-box" id="lead-intel-box" style="display:none; margin-top:15px;">
-            <h4>Inteligência de Custos</h4>
-            <div class="intel-grid">
-                <div class="intel-item"><span>Impostos:</span> <strong id="l_intel_impostos">R$ 0,00</strong></div>
-                <div class="intel-item"><span>CPV:</span> <strong id="l_intel_cpv">R$ 0,00</strong></div>
-                <div class="intel-item"><span>Lucro:</span> <strong id="l_intel_lucro">R$ 0,00</strong></div>
-            </div>
-        </div>
-        <div class="modal-actions">
-            <button class="btn-modern btn-success" id="btn-win" onclick="setLeadResult('Venda')">MARCAR VENDA</button>
-            <button class="btn-modern btn-danger" id="btn-loss" onclick="setLeadResult('Perda')">MARCAR PERDA</button>
-            <button class="btn-modern btn-primary" onclick="saveLead()">SALVAR</button>
-            <button class="btn-modern btn-danger" onclick="deleteLead()">EXCLUIR</button>
-            <button class="btn-modern" onclick="closeAllModals()">CANCELAR</button>
-        </div>
+    <!-- Modal Lead -->
+    <div class="modal-modern" id="lead-modal">
+        <h3>NOVO/EDITAR LEAD</h3>
+        <div class="field-group"><label>Cliente</label><input type="text" id="lead-cliente"></div>
+        <div class="field-group"><label>Empresa</label><input type="text" id="lead-empresa"></div>
+        <div class="field-group"><label>Valor</label><input type="number" id="lead-valor"></div>
+        <div class="field-group"><label>Status</label><select id="lead-status"></select></div>
+        <div class="field-group"><label>Entrega</label><input type="date" id="lead-entrega"></div>
+        <div class="field-group"><label>Origem</label><input type="text" id="lead-origem"></div>
+        <div class="field-group"><label>Resultado</label><select id="lead-resultado"><option value="Pendente">Pendente</option><option value="Venda">Venda</option><option value="Perda">Perda</option></select></div>
+        <button class="btn-modern btn-primary" style="width:100%; margin-top: 20px;" onclick="saveLead()"><i class="fas fa-save"></i> SALVAR LEAD</button>
     </div>
 
-    <!-- MODAL FINANCEIRO -->
-    <div id="finance-modal" class="modal-modern">
-        <h3 id="fin-modal-title">NOVA TRANSAÇÃO</h3>
-        <input type="hidden" id="f_tipo">
-        <div class="field-group"><label>Descrição</label><input type="text" id="f_desc"></div>
-        <div class="field-row">
-            <div class="field-group"><label>Valor (R$)</label><input type="number" id="f_valor"></div>
-            <div class="field-group"><label>Data</label><input type="date" id="f_data"></div>
-        </div>
-        <div class="field-group">
-            <label>Categoria</label>
-            <select id="f_cat_select"></select>
-        </div>
-        <div class="modal-actions">
-            <button class="btn-modern btn-primary" onclick="saveTransaction()">SALVAR</button>
-            <button class="btn-modern" onclick="closeAllModals()">CANCELAR</button>
-        </div>
+    <!-- Modal Transação Financeira -->
+    <div class="modal-modern" id="transaction-modal">
+        <h3>NOVA TRANSAÇÃO</h3>
+        <div class="field-group"><label>Descrição</label><input type="text" id="trans-desc"></div>
+        <div class="field-group"><label>Valor</label><input type="number" id="trans-valor"></div>
+        <div class="field-group"><label>Tipo</label><select id="trans-tipo"><option value="entrada">Entrada</option><option value="saída">Saída</option></select></div>
+        <div class="field-group"><label>Categoria</label><select id="trans-cat"></select></div>
+        <div class="field-group"><label>Data</label><input type="date" id="trans-data"></div>
+        <button class="btn-modern btn-primary" style="width:100%; margin-top: 20px;" onclick="saveTransaction()"><i class="fas fa-save"></i> SALVAR TRANSAÇÃO</button>
     </div>
 
-    <!-- MODAL ESTOQUE -->
-    <div id="stock-modal" class="modal-modern">
-        <h3>GERENCIAR ITEM ESTOQUE</h3>
-        <input type="hidden" id="s_id">
-        <div class="field-group"><label>Nome do Item</label><input type="text" id="s_nome"></div>
-        <div class="field-group"><label>Categoria</label><input type="text" id="s_cat"></div>
-        <div class="field-row">
-            <div class="field-group"><label>Qtd Atual</label><input type="number" id="s_qtd"></div>
-            <div class="field-group"><label>Qtd Mínima</label><input type="number" id="s_min"></div>
-        </div>
-        <div class="field-group"><label>Valor Unitário (Custo)</label><input type="number" id="s_valor"></div>
-        <div class="modal-actions">
-            <button class="btn-modern btn-primary" onclick="saveStockItem()">SALVAR</button>
-            <button class="btn-modern" onclick="closeAllModals()">CANCELAR</button>
-        </div>
+    <!-- Modal Ajustar Saldo Inicial -->
+    <div class="modal-modern" id="balance-modal">
+        <h3>AJUSTAR SALDO INICIAL</h3>
+        <div class="field-group"><label>Saldo Inicial (R$)</label><input type="number" id="initial-balance-input"></div>
+        <button class="btn-modern btn-primary" style="width:100%; margin-top: 20px;" onclick="saveInitialBalance()"><i class="fas fa-save"></i> SALVAR SALDO</button>
+    </div>
+
+    <!-- Modal Estoque -->
+    <div class="modal-modern" id="stock-modal">
+        <h3>NOVO/EDITAR ITEM DE ESTOQUE</h3>
+        <div class="field-group"><label>Nome do Item</label><input type="text" id="stock-nome"></div>
+        <div class="field-group"><label>Quantidade</label><input type="number" id="stock-qtd"></div>
+        <div class="field-group"><label>Unidade</label><input type="text" id="stock-unidade"></div>
+        <div class="field-group"><label>Custo Unitário (R$)</label><input type="number" id="stock-custo-unitario"></div>
+        <button class="btn-modern btn-primary" style="width:100%; margin-top: 20px;" onclick="saveStockItem()"><i class="fas fa-save"></i> SALVAR ITEM</button>
     </div>
 
     <script src="script.js"></script>
